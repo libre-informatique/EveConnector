@@ -2,7 +2,7 @@
   "name": "eve-connector",
   "version": "0.1.0",
   "description": "Make your browser communicate with USB through WebSockets",
-  "main": "ws-server3.js",
+  "main": "eve-connector-server.js",
   "dependencies": {
     "atob": "^2.0.0",
     "socket.io": "^1.4.5",
