@@ -79,14 +79,14 @@ sendDataToUsb = function(device, data)
             reject('Device not available');
         }
         usbdev.open();
-        
+
         console.log('Resetting USB device...')
         usbdev.reset(function(error){
             error && reject(error);
 
             // we use the first interface
             var interface = usbdev.interface(0);
-            if ( interface.isKernelDriverActive() )
+            if ( process.platform == 'linux' && interface.isKernelDriverActive() )
                 interface.detachKernelDriver();
             interface.claim();
 
@@ -123,7 +123,7 @@ pollDevice = function(device)
 
         // we use the first interface
         var interface = usbdev.interface(0);
-        if ( interface.isKernelDriverActive() )
+        if ( process.platform == 'linux' && interface.isKernelDriverActive() )
             interface.detachKernelDriver();
         interface.claim();
 
