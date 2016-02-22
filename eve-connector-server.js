@@ -2,8 +2,8 @@ var exports = module.exports = {};
 
 var fs = require('fs');
 var https_options = {
-    key: fs.readFileSync("server.key"),
-    cert: fs.readFileSync("server.crt")
+    key: fs.readFileSync(__dirname+'/server.key"),
+    cert: fs.readFileSync(__dirname+"/server.crt")
 }
 var Devices = require('./devices.js');
 
