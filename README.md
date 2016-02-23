@@ -30,6 +30,8 @@ to create a server listening on port 8164 :
 var EC = require('eve-connector-server.js').createServer(8164);
 ```
 
+If you want to test the client side implementation, just point your browser to ```https://localhost:8164```
+
 Permissions
 ------------
 
