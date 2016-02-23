@@ -2,6 +2,7 @@ var exports = module.exports = {};
 
 var usb = require('usb');
 var atob = require('atob');
+var btoa = require('btoa');
 var when = require('when');
 
 checkDeviceType = function(device)
@@ -115,6 +116,7 @@ sendDataToUsb = function(device, data)
 pollDevice = function(device)
 {
     return when.promise(function(resolve, reject){
+        checkDeviceType(device);
         var usbdev = usb.findByIds(parseInt(device.params.vid), parseInt(device.params.pid));
         if ( usbdev === undefined) {
             reject('Device not available');
@@ -131,22 +133,19 @@ pollDevice = function(device)
         var inEp = interface.endpoints.find(function(ep){
             return ep.direction === "in";
         });
-        if (inEp == undefined) {
-            console.log('IN enpoint not found on device')
-        }
-        else {
-            // we start listen to the IN endpoint
-            //var session = module.parent.exports.getSession();
-            inEp.on('data', function(data) {
-                if ( data.length ) {
-                    console.log('ondata received:', data, data.length);
-                    inEp.stopPoll();
-                }
+        if (inEp == undefined)
+            reject('IN enpoint not found on device');
 
-            });
-            console.log('Start polling device', device);
-            inEp.startPoll();
-        }
+        // we start listening to the IN endpoint
+        inEp.on('data', function(data) {
+            if ( data.length ) {
+                console.log('ondata received:', data, data.length);
+                inEp.stopPoll();
+                resolve(btoa(data));
+            }
+        });
+        console.log('Start polling device', device);
+        inEp.startPoll();
     });
 }
 

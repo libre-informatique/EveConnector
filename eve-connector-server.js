@@ -71,9 +71,16 @@ createServer = function(port) {
             console.log('received sendData: ', device, 'data...');
             Devices.sendData(device, data).then(
                 function(res){
-                    socket.emit('sendData', {res: res});
-                    console.log('sendData answered');
-                    Devices.pollDevice(device);
+                    Devices.pollDevice(device).then(
+                        function(res) {
+                            socket.emit('sendData', {res: res});
+                            console.log('sendData answered');
+                        },
+                        function(err) {
+                            socket.emit('sendData', {err: err});
+                            console.log('sendData answered with error: ', err);                            
+                        }
+                    );
                 },
                 function(err){
                     socket.emit('sendData', {err: err});
