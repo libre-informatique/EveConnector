@@ -16,8 +16,19 @@ createServer = function(port) {
     console.info('Eve-Connector up and running. Listening on port ' + port);
 
     function handler (req, res) {
-        res.writeHead(200);
-        res.end('Node.js https server.');
+        //res.writeHead(200);
+        //res.end('Node.js https server.');
+
+        fs.readFile(__dirname + 'web/index.html',
+        function (err, data) {
+          if (err) {
+            res.writeHead(500);
+            return res.end('Error loading index.html');
+          }
+
+          res.writeHead(200);
+          res.end(data);
+        });
     }
 
     io.on('connection', function(socket) {
@@ -25,12 +36,6 @@ createServer = function(port) {
 
         socket.on('disconnect', function() {
             console.log('user disconnected');
-        });
-
-        socket.on('chat message', function(msg) {
-            console.log('message: ' + msg);
-            io.emit('answer', '[io] we got your message: ' + msg);
-            socket.emit('answer', '[socket] we got your message: ' + msg);
         });
 
         socket.on('listDevices', function(type) {
