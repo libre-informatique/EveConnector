@@ -9,28 +9,26 @@ var Devices = require('./devices.js');
 
 createServer = function(port) {
 
-    var app = require('https').createServer(https_options, handler);
-    var io = require('socket.io')(app);
-
-    app.listen(port);
+    // Start server
+    //
+    var https = require('https');
+    var express = require('express');
+    var app = express();
+    var httpsServer = https.createServer(https_options, app);
+    httpsServer.listen(port);
+    var io = require('socket.io')(httpsServer);
     console.info('Eve-Connector up and running. Listening on port ' + port);
 
-    function handler (req, res) {
-        res.writeHead(200);
-        res.end('Node.js https server.');
+    // Static web pages
+    //
+    app.get('/', function (req, res) {
+      res.sendFile(__dirname + '/web/index.html');
+    });
+    app.use('/js', express.static(__dirname + '/web/js'));
+    app.use('/test_data', express.static(__dirname + '/web/test_data'));
 
-        // fs.readFile(__dirname + 'web/index.html',
-        // function (err, data) {
-        //   if (err) {
-        //     res.writeHead(500);
-        //     return res.end('Error loading index.html');
-        //   }
-        //
-        //   res.writeHead(200);
-        //   res.end(data);
-        // });
-    }
-
+    // WebSockets
+    //
     io.on('connection', function(socket) {
         console.log('a user connected');
 
@@ -78,7 +76,7 @@ createServer = function(port) {
                         },
                         function(err) {
                             socket.emit('sendData', {err: err});
-                            console.log('sendData answered with error: ', err);                            
+                            console.log('sendData answered with error: ', err);
                         }
                     );
                 },
@@ -90,6 +88,6 @@ createServer = function(port) {
         });
     });
 
-} // end createServer
+} // end createServer()
 
 exports.createServer = createServer;

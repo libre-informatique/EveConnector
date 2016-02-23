@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Node.js WS server</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font: 13px Helvetica, Arial;
+        }
+
+        form#chat {
+            background: #000;
+            padding: 3px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        form#chat input {
+            border: 0;
+            padding: 10px;
+            width: 90%;
+            margin-right: .5%;
+        }
+
+        form#chat button {
+            width: 9%;
+            background: rgb(130, 224, 255);
+            border: none;
+            padding: 10px;
+        }
+
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        #messages li {
+            padding: 5px 10px;
+        }
+
+        #messages li:nth-child(odd) {
+            background: #eee;
+        }
+    </style>
+
+    <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+    <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+    <script src="js/eve-connector.js"></script>
+</head>
+
+<body>
+    <h1>EveConnector test page</h1>
+    <p><a href="https://github.com/libre-informatique/EveConnector.git" target="_blank">Fork it on GitHub</a></p>
+
+    <form id="printers">
+        <br><br><br>
+        <input type="text" id="vid" placeholder="VID">
+        <input type="text" id="pid" placeholder="PID">
+        <button id="device-available" onclick="isDeviceAvailableClicked()">is Available ?</button>
+        <br><br><br>
+        <button id="print" onclick="printClicked()">Print !</button>
+        <button id="test" onclick="testClicked()">Test</button>
+        <button id="devices-available" onclick="areDevicesAvailableClicked()">Are Devices Available</button>
+    </form>
+
+    <ul id="messages"></ul>
+
+    <script>
+        var eveconn = new EveConnector('https://localhost:8164', function(){
+            this.loginfo('directExecute');
+        });
+
+        $('form#printers').submit(function() {
+            return false;
+        });
+
+        isDeviceAvailableClicked = function() {
+            var device = {
+                type: 'usb',
+                params: {
+                    vid: $('#vid').val(),
+                    pid: $('#pid').val()
+                }
+            };
+            eveconn.isDeviceAvailable(device).then(
+                function(res) { console.info("isDeviceAvailable() result:", res); },
+                function(err) { console.error("isDeviceAvailable() error:", err); }
+            );
+        };
+
+        areDevicesAvailableClicked = function() {
+            var query = {
+                type: 'usb',
+                params: [{vid: 1305, pid:1}, {vid: 1333, pid: 1}]
+            };
+            eveconn.areDevicesAvailable(query).then(
+                function(res) { console.info("areDevicesAvailable() result:", res); },
+                function(err) { console.error("areDevicesAvailable() error:", err); }
+            );
+        };
+
+        testClicked = function() {
+            var device = {
+                type: 'usb',
+                params: {
+                    vid: $('#vid').val(),
+                    pid: $('#pid').val()
+                }
+            };
+            abSession.call('org.e-venement.test', [device]).then(
+                function (res) {
+                   console.log("test() result:", res);
+                },
+                function (err) {
+                   console.log("test() error:", err);
+                }
+            );
+        };
+
+        printClicked = function() {
+            var device = {
+                type: 'usb',
+                params: {
+                    vid: $('#vid').val(),
+                    pid: $('#pid').val()
+                }
+            };
+           $.get( "test_data/boca_b64", function( response ) {
+               sendData(vid, pid, response);
+           });
+        };
+
+        sendData = function(vid, pid, data) {
+            var device = {
+                type: 'usb',
+                params: {
+                    vid: $('#vid').val(),
+                    pid: $('#pid').val()
+                }
+            };
+            eveconn.sendData(device, data).then(
+                function(res) { console.info("sendData() result:", res); },
+                function(err) { console.error("sendData() error:", err); }
+            );
+        };
+
+    </script>
+</body>
+
+</html>
