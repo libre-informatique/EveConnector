@@ -62,7 +62,6 @@ areDevicesAvailable = function(type, devicesList)
 }
 
 sendData = function(device, data) {
-    checkDeviceType(device);
     switch ( device.type ) {
         case 'usb':
             return sendDataToUsb(device, data);
@@ -74,6 +73,7 @@ sendData = function(device, data) {
 sendDataToUsb = function(device, data)
 {
     return when.promise(function(resolve, reject){
+        checkDeviceType(device);
         var usbdev = usb.findByIds(parseInt(device.params.vid), parseInt(device.params.pid));
         if ( usbdev === undefined) {
             reject('Device not available');
