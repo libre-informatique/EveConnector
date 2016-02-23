@@ -14,6 +14,8 @@ curl -sL https://deb.nodesource.com/setup_4.x | sudo bash -
 sudo apt-get install nodejs
 ```
 
+Additionally on Windows, use [Zadig](http://zadig.akeo.ie/) to install the WinUSB driver for your USB device. Otherwise you will get LIBUSB_ERROR_NOT_SUPPORTED when attempting to open devices.
+
 Installing
 -----------
 
