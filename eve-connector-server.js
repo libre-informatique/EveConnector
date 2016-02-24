@@ -7,6 +7,8 @@ var https_options = {
 }
 var Devices = require('./devices.js');
 
+require('appinspect').print(module);
+
 createServer = function(port) {
 
     // Start server
