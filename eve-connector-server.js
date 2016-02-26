@@ -29,10 +29,17 @@ createServer = function(port) {
     app.use('/js', express.static(__dirname + '/web/js'));
     app.use('/test_data', express.static(__dirname + '/web/test_data'));
 
+    //Devices.test({ type: 'usb', params:{vid: 1305, pid: 1} });
+
     // WebSockets
     //
     io.on('connection', function(socket) {
         console.log('a user connected');
+
+        socket.emitError = function(channel, error) {
+            var err = error.message ? error.message : error;
+            socket.emit(channel, {err: err});
+        }
 
         socket.on('disconnect', function() {
             console.log('user disconnected');
@@ -48,7 +55,7 @@ createServer = function(port) {
                 socket.emit('isDeviceAvailable', {res: res});
             }
             catch(error) {
-                socket.emit('isDeviceAvailable', {err: error});
+                socket.emitError('isDeviceAvailable', error);
             }
             console.log('isDeviceAvailable answered');
         });
@@ -62,7 +69,7 @@ createServer = function(port) {
                 socket.emit('areDevicesAvailable', {res: res});
             }
             catch(error) {
-                socket.emit('areDevicesAvailable', {err: error});
+                socket.emitError('areDevicesAvailable', error);
             }
             console.log('areDevicesAvailable answered');
         });
@@ -71,22 +78,50 @@ createServer = function(port) {
             console.log('received sendData: ', device, 'data...');
             Devices.sendData(device, data).then(
                 function(res){
-                    Devices.pollDevice(device).then(
-                        function(res) {
-                            socket.emit('sendData', {res: res});
-                            console.log('sendData answered');
-                        },
-                        function(err) {
-                            socket.emit('sendData', {err: err});
-                            console.log('sendData answered with error: ', err);
-                        }
-                    );
+                    socket.emit('sendData', {res: res});
+                    console.log('sendData answered');
                 },
                 function(err){
-                    socket.emit('sendData', {err: err});
-                    console.log('sendData answered with error: ', err);
+                    socket.emitError('sendData', err);
+                    console.log('sendData answered with error: ', err.message);
                 }
             );
+        });
+
+        socket.on('readData', function(device, length) {
+            console.log('received readData: ', device, length);
+            Devices.readData(device, length).then(
+                function(res){
+                    socket.emit('readData', {res: res});
+                    console.log('readData answered');
+                },
+                function(err){
+                    socket.emitError('readData', err);
+                    console.log('readData answered with error: ', err.message);
+                }
+            );
+        });
+
+        socket.on('startPoll', function(device) {
+            console.log('received startPoll: ', device, 'data...');
+            try {
+                Devices.startPoll(device, socket);
+            }
+            catch(error) {
+                socket.emitError('startPoll', error);
+                console.log('startPoll answered with error:', error);
+            }
+        });
+
+        socket.on('stopPoll', function(device) {
+            console.log('received stopPoll: ', device, 'data...');
+            try {
+                Devices.stopPoll(device);
+            }
+            catch(error) {
+                socket.emitError('stopPoll', error);
+                console.log('stopPoll answered with error:', error);
+            }
         });
     });
 

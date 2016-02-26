@@ -6,7 +6,6 @@
     <meta charset="UTF-8">
     <title>Node.js WS server</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <style>
         * {
             margin: 0;
@@ -16,6 +15,20 @@
 
         body {
             font: 13px Helvetica, Arial;
+        }
+
+        form.device, form#data {
+            margin: 20px;
+        }
+
+        form#data {
+            padding: 10px;
+            border: 1px solid #ccc;
+            width: 500px;
+        }
+
+        form.device input[type=text] {
+            width: 50px;
         }
 
         #messages {
@@ -32,7 +45,6 @@
             background: #eee;
         }
     </style>
-
     <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
     <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
     <script src="js/eve-connector.js"></script>
@@ -42,16 +54,41 @@
     <h1>EveConnector test page</h1>
     <p><a href="https://github.com/libre-informatique/EveConnector.git" target="_blank">Fork it on GitHub</a></p>
 
-    <form id="printers">
-        <br><br><br>
-        <input type="text" id="vid" placeholder="VID">
-        <input type="text" id="pid" placeholder="PID">
-        <button id="device-available" onclick="isDeviceAvailableClicked()">is Available ?</button>
-        <br><br><br>
-        <button id="print" onclick="printClicked()">Print !</button>
-        <button id="test" onclick="testClicked()">Test</button>
-        <button id="devices-available" onclick="areDevicesAvailableClicked()">Are Devices Available</button>
+    <form id="data">
+        <strong>DATA</strong>
+        <br>
+        <label><input type="radio" name="source" value="star_b64"> Star printer data</label>
+        <br>
+        <label><input type="radio" name="source" value="boca_b64"> Boca printer data</label>
+        <br>
+        <label><input type="radio" name="source" value="base64"> Other (base64): </label>
+        <input type="text" name="base64" id="base64">
     </form>
+
+    <form class="device">
+        <label>pid : vid</label>
+        <input type="text" name="vid" placeholder="VID" value="1305"> :
+        <input type="text" name="pid" placeholder="PID" value="1">
+        <button class="device-available">Is Available ?</button>
+        <button class="start-poll">Start polling</button>
+        <button class="stop-poll">Stop polling</button>
+        <button class="send-data"><b>Send data</b></button>
+        <button class="read-data">Read data</button>
+    </form>
+
+    <form class="device">
+        <label>pid : vid</label>
+        <input type="text" name="vid" placeholder="VID" value="2627"> :
+        <input type="text" name="pid" placeholder="PID" value="514">
+        <button class="device-available">Is Available ?</button>
+        <button class="start-poll">Start polling</button>
+        <button class="stop-poll">Stop polling</button>
+        <button class="send-data"><b>Send data</b></button>
+        <button class="read-data">Read data</button>
+    </form>
+
+    <button id="devices-available" onclick="areDevicesAvailableClicked()">Are Devices Available</button>
+    <button class="test">Test</button>
 
     <ul id="messages"></ul>
 
@@ -60,22 +97,44 @@
             this.loginfo('directExecute');
         });
 
-        $('form#printers').submit(function() {
-            return false;
-        });
-
         isDeviceAvailableClicked = function() {
             var device = {
                 type: 'usb',
                 params: {
-                    vid: $('#vid').val(),
-                    pid: $('#pid').val()
+                    vid: $(this).prevAll('[name=vid]').val(),
+                    pid: $(this).prevAll('[name=pid]').val()
                 }
             };
             eveconn.isDeviceAvailable(device).then(
                 function(res) { console.info("isDeviceAvailable() result:", res); },
                 function(err) { console.error("isDeviceAvailable() error:", err); }
             );
+        };
+
+        startPollClicked = function() {
+            var device = {
+                type: 'usb',
+                params: {
+                    vid: $(this).prevAll('[name=vid]').val(),
+                    pid: $(this).prevAll('[name=pid]').val()
+                }
+            };
+            eveconn.startPoll(device, gotPoll);
+        };
+
+        gotPoll = function(msg) {
+            console.info(msg);
+        };
+
+        stopPollClicked = function() {
+            var device = {
+                type: 'usb',
+                params: {
+                    vid: $(this).prevAll('[name=vid]').val(),
+                    pid: $(this).prevAll('[name=pid]').val()
+                }
+            };
+            eveconn.stopPoll(device);
         };
 
         areDevicesAvailableClicked = function() {
@@ -93,39 +152,35 @@
             var device = {
                 type: 'usb',
                 params: {
-                    vid: $('#vid').val(),
-                    pid: $('#pid').val()
+                    vid: $(this).prevAll('[name=vid]').val(),
+                    pid: $(this).prevAll('[name=pid]').val()
                 }
             };
-            abSession.call('org.e-venement.test', [device]).then(
-                function (res) {
-                   console.log("test() result:", res);
-                },
-                function (err) {
-                   console.log("test() error:", err);
-                }
-            );
+
         };
 
-        printClicked = function() {
-            var device = {
-                type: 'usb',
-                params: {
-                    vid: $('#vid').val(),
-                    pid: $('#pid').val()
-                }
-            };
-           $.get( "test_data/boca_b64", function( response ) {
-               sendData(vid, pid, response);
-           });
+        sendDataClicked = function() {
+            var vid = $(this).prevAll('[name=vid]').val();
+            var pid = $(this).prevAll('[name=pid]').val();
+
+            var source = $('input[name=source]:checked', '#data').val();
+            if ( source == 'base64' ) {
+                var data =  $('#base64', '#data').val();
+                sendData(vid, pid, data);
+                return;
+            }
+
+            $.get( 'test_data/'+source, function( response ) {
+                sendData(vid, pid, response);
+            });
         };
 
         sendData = function(vid, pid, data) {
             var device = {
                 type: 'usb',
                 params: {
-                    vid: $('#vid').val(),
-                    pid: $('#pid').val()
+                    vid: vid,
+                    pid: pid
                 }
             };
             eveconn.sendData(device, data).then(
@@ -133,6 +188,30 @@
                 function(err) { console.error("sendData() error:", err); }
             );
         };
+
+        readDataClicked = function() {
+            var device = {
+                type: 'usb',
+                params: {
+                    vid: $(this).prevAll('[name=vid]').val(),
+                    pid: $(this).prevAll('[name=pid]').val()
+                }
+            };
+            eveconn.readData(device).then(
+                function(res) { console.info("readData() result:", res); },
+                function(err) { console.error("readData() error:", err); }
+            );
+        };
+
+        $(document).ready(function(){
+            $('form.device').submit(function() { return false; });
+            $('.device-available').click(isDeviceAvailableClicked);
+            $('.start-poll').click(startPollClicked);
+            $('.stop-poll').click(stopPollClicked);
+            $('.send-data').click(sendDataClicked);
+            $('.read-data').click(readDataClicked);
+            $('.test').click(testClicked);
+        });
 
     </script>
 </body>
