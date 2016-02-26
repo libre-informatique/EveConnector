@@ -6,58 +6,34 @@ var btoa = require('btoa');
 var when = require('when');
 
 // claimed USB interfaces
-var claimedUsb = [];
+var _claimedUsb = [];
 
 // polling USB interfaces
 var _pollingUsb = [];
 
-checkDeviceType = function(device)
+var checkDeviceType = function(device)
 {
-    if ( ! device.type )
-        throw (['Device type is empty', device])
+    if (!device)
+        throw ('device is undefined')
+    if ( device.type != 'usb' )
+        throw (['Device type should be "usb"', device])
     if ( ! device.params )
         throw (['Device params is empty', device])
-    switch ( device.type ) {
-        case 'usb':
-            if ( !device.params.vid || !device.params.pid )
-                throw (['You must provide VID and PID parameters for USB devices', device.params]);
-            break;
-        default:
-            throw (['Device type not supported', device.type]);
-    }
+    if ( !device.params.vid || !device.params.pid )
+        throw (['You must provide VID and PID parameters for USB devices', device.params]);
 }
 
-listDevices = function(type) {
-    switch ( type ) {
-        case 'usb':
-            return listUsbDevices();
-        default:
-            throw (['Device type not supported', type]);
-    }
-}
-
-listUsbDevices = function() {
+var listDevices = function(type) {
     return usb.getDeviceList();
 }
 
-isDeviceAvailable = function(device)
-{
-    checkDeviceType(device);
-    switch ( device.type ) {
-        case 'usb':
-            return isUsbDeviceAvailable(device);
-        default:
-            return false;
-    }
-}
-
-isUsbDeviceAvailable = function(device)
+var isDeviceAvailable = function(device)
 {
     var found = usb.findByIds(parseInt(device.params.vid), parseInt(device.params.pid));
     return ( found !== undefined );
 }
 
-areDevicesAvailable = function(type, devicesList)
+var areDevicesAvailable = function(type, devicesList)
 {
     var available = { type: type, params: []};
     devicesList.forEach(function(d){
@@ -68,16 +44,7 @@ areDevicesAvailable = function(type, devicesList)
     return available;
 }
 
-sendData = function(device, data) {
-    switch ( device.type ) {
-        case 'usb':
-            return sendDataToUsb(device, data);
-        default:
-            return false;
-    }
-}
-
-sendDataToUsb = function(device, data)
+var sendData = function(device, data)
 {
     //usb.setDebugLevel(4);
     return when.promise(function(resolve, reject){
@@ -119,19 +86,9 @@ sendDataToUsb = function(device, data)
     });
 }
 
-
-readData = function(device, length) {
-    switch ( device.type ) {
-        case 'usb':
-            return readDataFromUsb(device, length);
-        default:
-            return false;
-    }
-}
-
-readDataFromUsb = function(device, length)
+var readData = function(device, length)
 {
-    //usb.setDebugLevel(4);
+    console.log('usbDevices::readData');
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
         var interface = claimUsbInterface(device.params.vid, device.params.pid);
@@ -146,23 +103,14 @@ readDataFromUsb = function(device, length)
         console.log('Start reading in endpoint on device', device);
         inEp.transfer(length, function(error, data){
             error && reject(error);
-            console.log('IN endpoint data:', data);
+            console.log('readData:', data);
             // we send back base64 encoded data
-            resolve(btoa(data));
+            resolve(data != undefined ? btoa(data) : '');
         });
     });
 }
 
-startPoll = function(device, socket) {
-    switch ( device.type ) {
-        case 'usb':
-            return startPollUsb(device, socket);
-        default:
-            return false;
-    }
-}
-
-startPollUsb = function(device, socket)
+var startPoll = function(device, socket)
 {
     checkDeviceType(device);
     var interface = claimUsbInterface(device.params.vid, device.params.pid);
@@ -177,10 +125,9 @@ startPollUsb = function(device, socket)
     });
 
     inEp.on('data', function(data) {
-        if ( data.length ) {
+        if ( data && data.length ) {
             console.log('inEp data received:', data, data.length, device);
             socket.emit('usbPoll', btoa(data));
-
         }
     });
     console.log('Start polling device...', device);
@@ -193,16 +140,7 @@ startPollUsb = function(device, socket)
     });
 }
 
-stopPoll = function(device) {
-    switch ( device.type ) {
-        case 'usb':
-            return stopPollUsb(device);
-        default:
-            return false;
-    }
-}
-
-stopPollUsb = function(device)
+var stopPoll = function(device)
 {
     var polling = _pollingUsb.find(function(item){
         return ( item.vid == device.params.vid && item.pid == device.params.pid );
@@ -214,7 +152,7 @@ stopPollUsb = function(device)
 }
 
 
-claimUsbInterface = function(vid, pid)
+var claimUsbInterface = function(vid, pid)
 {
     vid = parseInt(vid);
     pid = parseInt(pid);
@@ -229,7 +167,7 @@ claimUsbInterface = function(vid, pid)
     var interface = usbdev.interface(0);
 
     // Check if interface has already been claimed
-    var claimed = claimedUsb.find(function(device){
+    var claimed = _claimedUsb.find(function(device){
         return (device.vid == vid && device.pid == pid);
     });
     if ( claimed == undefined ) {
@@ -237,14 +175,14 @@ claimUsbInterface = function(vid, pid)
         if ( process.platform == 'linux' && interface.isKernelDriverActive() )
             interface.detachKernelDriver();
         interface.claim();
-        claimedUsb.push({vid: vid, pid: pid});
+        _claimedUsb.push({vid: vid, pid: pid});
     }
 
     return interface;
 }
 
 
-getEndpoint = function(interface, direction)
+var getEndpoint = function(interface, direction)
 {
     var endpoint = interface.endpoints.find(function(ep){
         return ep.direction === direction;
@@ -256,7 +194,7 @@ getEndpoint = function(interface, direction)
 }
 
 
-test = function(device)
+var test = function(device)
 {
     console.log('test');
     startPoll(device);

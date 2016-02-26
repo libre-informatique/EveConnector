@@ -5,9 +5,27 @@ var https_options = {
     key: fs.readFileSync(__dirname+'/server.key'),
     cert: fs.readFileSync(__dirname+"/server.crt")
 }
-var Devices = require('./devices.js');
-
-require('appinspect').print(module);
+var usbDevices = require('./usbDevices.js');
+var websocketDevices = require('./websocketDevices.js');
+var getDeviceModule = function(device) {
+    console.log('getDeviceModule', device);
+    try {
+        var type = typeof(device) == 'string' ? device : device.type;
+        switch(type) {
+            case 'usb':
+                console.log('is usb');
+                return usbDevices;
+            case 'websocket':
+                console.log('is websocket');
+                return websocketDevices;
+            default:
+                return false;
+        }
+    }
+    catch(e) {
+        return false;
+    }
+}
 
 createServer = function(port) {
 
@@ -48,8 +66,9 @@ createServer = function(port) {
         socket.on('isDeviceAvailable', function(device) {
             console.log('received isDeviceAvailable: ', device);
             try {
+                var devmod = getDeviceModule(device);
                 var res = {
-                    available: Devices.isDeviceAvailable(device),
+                    available: devmod.isDeviceAvailable(device),
                     device: device
                 };
                 socket.emit('isDeviceAvailable', {res: res});
@@ -61,11 +80,12 @@ createServer = function(port) {
         });
 
         socket.on('areDevicesAvailable', function(query) {
-            var type = query.type;
-            var list = query.params;
             console.log('received areDevicesAvailable: ', query);
             try {
-                var res =  Devices.areDevicesAvailable(type, list);
+                var type = query.type;
+                var list = query.params;
+                var devmod = getDeviceModule(type);
+                var res =  devmod.areDevicesAvailable(type, list);
                 socket.emit('areDevicesAvailable', {res: res});
             }
             catch(error) {
@@ -75,8 +95,13 @@ createServer = function(port) {
         });
 
         socket.on('sendData', function(device, data) {
-            console.log('received sendData: ', device, 'data...');
-            Devices.sendData(device, data).then(
+            console.log('received sendData: ', device, data);
+            var devmod = getDeviceModule(device);
+            if (!devmod) {
+                socket.emitError('sendData', ['Device type not supported', device]);
+                return;
+            }
+            devmod.sendData(device, data).then(
                 function(res){
                     socket.emit('sendData', {res: res});
                     console.log('sendData answered');
@@ -90,7 +115,12 @@ createServer = function(port) {
 
         socket.on('readData', function(device, length) {
             console.log('received readData: ', device, length);
-            Devices.readData(device, length).then(
+            var devmod = getDeviceModule(device);
+            if (!devmod) {
+                socket.emitError('sendData', ['Device type not supported', device]);
+                return;
+            }
+            devmod.readData(device, length).then(
                 function(res){
                     socket.emit('readData', {res: res});
                     console.log('readData answered');
@@ -105,7 +135,8 @@ createServer = function(port) {
         socket.on('startPoll', function(device) {
             console.log('received startPoll: ', device, 'data...');
             try {
-                Devices.startPoll(device, socket);
+                var devmod = getDeviceModule(device);
+                devmod.startPoll(device, socket);
             }
             catch(error) {
                 socket.emitError('startPoll', error);
@@ -116,7 +147,8 @@ createServer = function(port) {
         socket.on('stopPoll', function(device) {
             console.log('received stopPoll: ', device, 'data...');
             try {
-                Devices.stopPoll(device);
+                var devmod = getDeviceModule(device);
+                devmod.stopPoll(device);
             }
             catch(error) {
                 socket.emitError('stopPoll', error);
@@ -126,5 +158,8 @@ createServer = function(port) {
     });
 
 } // end createServer()
+
+// Display some information about this module (based on package.jon)
+require('appinspect').print(module);
 
 exports.createServer = createServer;

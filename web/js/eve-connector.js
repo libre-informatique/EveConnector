@@ -30,26 +30,44 @@
 EveConnector = function(uri, directExecute) {
 
     // Debug functions
-    this.log = log = ( window.location.hash == '#debug' ) ? console.log : function(){};
-    this.loginfo = loginfo = ( window.location.hash == '#debug' ) ? console.info : function(){};
-    this.logerr = logerr = ( window.location.hash == '#debug' ) ? console.error : function(){};
+    this.log = function(type, msg, obj){
+      if ( window.location.hash != '#debug' )
+        return;
+      switch ( type ) {
+        case 'error':
+          console.error(msg, obj);
+          break;
+        case 'info':
+          console.info(msg, obj);
+          break;
+        default:
+          console.log(msg, obj);
+          break;
+      }
+    };
+    var log      = this.log;
+
+    var onError = function(){ }
 
     // Starts the connection to the server
     // (io must be in the global namespace: load socket.io before this file)
     this.socket = io(uri);
 
     this.socket.on('connect', function(){
-        loginfo('Connected', this);
+        log('info', 'Connected', this);
         ( typeof(directExecute) == 'function' ) && directExecute();
     });
     this.socket.on('connect_error', function(err){
-        logerr('connect_error', err);
+        log('error', 'connect_error', err);
+        onError();
     });
     this.socket.on('connect_failed', function(err){
-        logerr('connect_failed', err);
+        log('error', 'connect_failed', err);
+        onError();
     });
     this.socket.on('error', function(err){
-        logerr('error', err);
+        log('error', 'socket error', err);
+        onError();
     });
 
     this.isDeviceAvailable = function(device) {
