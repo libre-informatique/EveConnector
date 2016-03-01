@@ -1,5 +1,11 @@
 var exports = module.exports = {};
 
+process.on('uncaughtException', function(err) {
+    console.log('uncaughtException', err);
+});
+
+this.log = function(str) { console.log(str) }
+
 var fs = require('fs');
 var https_options = {
     key: fs.readFileSync(__dirname+'/server.key'),
@@ -8,7 +14,7 @@ var https_options = {
 var usbDevices = require('./usbDevices.js');
 var websocketDevices = require('./websocketDevices.js');
 var getDeviceModule = function(device) {
-    console.log('getDeviceModule', device);
+    console.log('getDeviceModule for', device);
     try {
         var type = typeof(device) == 'string' ? device : device.type;
         switch(type) {
@@ -27,7 +33,7 @@ var getDeviceModule = function(device) {
     }
 }
 
-createServer = function(port) {
+var createServer = function(port) {
 
     // Start server
     //
@@ -46,8 +52,6 @@ createServer = function(port) {
     });
     app.use('/js', express.static(__dirname + '/web/js'));
     app.use('/test_data', express.static(__dirname + '/web/test_data'));
-
-    //Devices.test({ type: 'usb', params:{vid: 1305, pid: 1} });
 
     // WebSockets
     //
@@ -95,7 +99,7 @@ createServer = function(port) {
         });
 
         socket.on('sendData', function(device, data) {
-            console.log('received sendData: ', device, data);
+            console.log('received sendData: ', device, 'data...');
             var devmod = getDeviceModule(device);
             if (!devmod) {
                 socket.emitError('sendData', ['Device type not supported', device]);

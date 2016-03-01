@@ -4,9 +4,7 @@ var usb = require('usb');
 var atob = require('atob');
 var btoa = require('btoa');
 var when = require('when');
-
-// claimed USB interfaces
-var _claimedUsb = [];
+var nodefn = require('when/node');
 
 // polling USB interfaces
 var _pollingUsb = [];
@@ -56,35 +54,38 @@ var sendData = function(device, data)
         if ( usbdev === undefined) {
             throw new Error('Device not available');
         }
-        console.log('Opening device...');
         usbdev.open();
-        console.log('Device opened');
 
         console.log('Resetting device...');
         usbdev.reset(function(error){
             error && reject(error);
             console.log('Device reset');
-            var interface = claimUsbInterface(vid, pid);
-            var outEp = getEndpoint(interface, 'out');
+            try {
+                var interface = claimUsbInterface(vid, pid);
+                var outEp = getEndpoint(interface, 'out');
+                outEp.on('error', function(epError){
+                    console.log('outEp error', epError)
+                    reject(epError);
+                });
 
-            // decode base64 data
-            var bin = new Buffer(atob(data.toString()), 'binary');
+                // decode base64 data
+                var bin = new Buffer(atob(data.toString()), 'binary');
 
-            outEp.on('error', function(epError){
-                console.log('outEp error', epError)
-                reject(epError);
-            });
-
-            console.log('sending data... ');
-            outEp.transfer(bin, function(epError, tf_data){
-                console.log('...data sent to USB');
-                epError && reject(epError);
-                resolve(tf_data);
-            });
-
+                console.log('sending data... ');
+                outEp.transfer(bin, function(epError, tf_data){
+                    console.log('...data sent to USB');
+                    epError && reject(epError);
+                    resolve(tf_data);
+                });
+            }
+            catch(e){
+                reject(e);
+            }
         });
     });
-}
+};
+
+
 
 var readData = function(device, length)
 {
@@ -122,6 +123,7 @@ var startPoll = function(device, socket)
 
     inEp.on('end', function(error) {
         console.log('inEp polling ended');
+        console.log(inEp);
     });
 
     inEp.on('data', function(data) {
@@ -164,20 +166,12 @@ var claimUsbInterface = function(vid, pid)
     usbdev.open();
 
     // we use the first interface
+    // TODO: implement interface number
     var interface = usbdev.interface(0);
 
-    // Check if interface has already been claimed
-    var claimed = _claimedUsb.find(function(device){
-        return (device.vid == vid && device.pid == pid);
-    });
-    if ( claimed == undefined ) {
-        console.log('interface not claimed yet');
-        if ( process.platform == 'linux' && interface.isKernelDriverActive() )
-            interface.detachKernelDriver();
-        interface.claim();
-        _claimedUsb.push({vid: vid, pid: pid});
-    }
-
+    if ( process.platform == 'linux' && interface.isKernelDriverActive() )
+        interface.detachKernelDriver();
+    interface.claim();
     return interface;
 }
 

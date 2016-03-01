@@ -12,8 +12,10 @@ var checkDeviceType = function(device)
         throw (['Device type should be "usb"', device])
     if ( ! device.params )
         throw (['Device params is empty', device])
-    if ( !device.params.url )
-        throw (['You must provide url param for websocket devices', device.params]);
+    if ( !device.params.ip )
+        throw (['You must provide ip param for websocket devices', device.params]);
+    if ( !device.params.port )
+        throw (['You must provide port param for websocket devices', device.params]);
 }
 
 var listDevices = function() {
@@ -23,7 +25,8 @@ var listDevices = function() {
 var isDeviceAvailable = function(device)
 {
     checkDeviceType(device);
-    var url = device.params.url;
+    var ip = device.params.ip;
+    var port = device.params.port;
     return false;
 }
 
@@ -31,9 +34,9 @@ var areDevicesAvailable = function(type, devicesList)
 {
     var available = { type: type, params: []};
     devicesList.forEach(function(d){
-        var device = {type: type, params:{url: d.url}};
+        var device = {type: type, params:{ip: d.ip, port: d.port}};
         if (isDeviceAvailable(device))
-            available.params.push({url: d.url});
+            available.params.push({ip: d.ip, port: d.port});
     });
     return available;
 }
@@ -42,7 +45,8 @@ var sendData = function(device, data)
 {
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
-        var url = device.params.url;
+        var ip = device.params.ip;
+        var port = device.params.port;
         reject('sendData() is not implemented yet for websocket devices');
     });
 }
@@ -51,7 +55,8 @@ var readData = function(device, length)
 {
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
-        var url = device.params.url;
+        var ip = device.params.ip;
+        var port = device.params.port;
         reject('readData() is not implemented yet for websocket devices');
     });
 }
@@ -59,13 +64,15 @@ var readData = function(device, length)
 var startPoll = function(device, socket)
 {
     checkDeviceType(device);
-    var url = device.params.url;
+    var ip = device.params.ip;
+    var port = device.params.port;
     throw new Error('startPoll() is not implemented yet for websocket devices');
 }
 
 var stopPoll = function(device) {
     checkDeviceType(device);
-    var url = device.params.url;
+    var ip = device.params.ip;
+    var port = device.params.port;
     throw new Error('stopPoll() is not implemented yet for websocket devices');
 }
 
