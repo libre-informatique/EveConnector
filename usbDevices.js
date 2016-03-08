@@ -42,11 +42,14 @@ var areDevicesAvailable = function(type, devicesList)
     return available;
 }
 
-var sendData = function(device, data)
+var sendData = function(device, data, socket)
 {
     //usb.setDebugLevel(4);
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
+
+        var wasPolling = isPolling(device);
+        stopPoll(device);
 
         var vid = parseInt(device.params.vid);
         var pid = parseInt(device.params.pid);
@@ -65,6 +68,7 @@ var sendData = function(device, data)
                 var outEp = getEndpoint(interface, 'out');
                 outEp.on('error', function(epError){
                     console.log('outEp error', epError)
+                    wasPolling && startPoll(device);
                     reject(epError);
                 });
 
@@ -74,11 +78,13 @@ var sendData = function(device, data)
                 console.log('sending data... ');
                 outEp.transfer(bin, function(epError, tf_data){
                     console.log('...data sent to USB');
+                    wasPolling && startPoll(device, socket);
                     epError && reject(epError);
                     resolve(tf_data);
                 });
             }
             catch(e){
+                wasPolling && startPoll(device);
                 reject(e);
             }
         });
@@ -111,9 +117,29 @@ var readData = function(device, length)
     });
 }
 
+var isPolling = function(device) {
+    var polling = _pollingUsb.find(function(item){
+        return ( item.vid == device.params.vid && item.pid == device.params.pid );
+    });
+    return polling !== undefined;
+}
+
+var getPollingEndpoint = function(device) {
+    var polling = _pollingUsb.find(function(item){
+        return ( item.vid == device.params.vid && item.pid == device.params.pid );
+    });
+    return ( polling !== undefined ) ? polling.endpoint : null;
+}
+
 var startPoll = function(device, socket)
 {
     checkDeviceType(device);
+
+    if ( isPolling(device) ) {
+        console.log('Already polling device...', device);
+        return;
+    }
+
     var interface = claimUsbInterface(device.params.vid, device.params.pid);
     var inEp = getEndpoint(interface, 'in');
 
@@ -123,7 +149,14 @@ var startPoll = function(device, socket)
 
     inEp.on('end', function(error) {
         console.log('inEp polling ended');
-        console.log(inEp);
+
+        var polling = _pollingUsb.find(function(item){
+            return ( item.endpoint == inEp );
+        });
+        if ( polling !== undefined )
+            _pollingUsb.splice(_pollingUsb.indexOf(polling), 1);
+
+        inEp.removeListener('data');
     });
 
     inEp.on('data', function(data) {
@@ -137,20 +170,19 @@ var startPoll = function(device, socket)
     _pollingUsb.push({
         vid: device.params.vid,
         pid: device.params.pid,
-        endpoint: inEp,
-        polling: true
+        endpoint: inEp
     });
 }
 
 var stopPoll = function(device)
 {
-    var polling = _pollingUsb.find(function(item){
-        return ( item.vid == device.params.vid && item.pid == device.params.pid );
-    });
-    if ( polling == undefined )
-        throw new Exception('Was not polling');
-
-    polling.endpoint.stopPoll();
+    checkDeviceType(device);
+    var inEndpoint = getPollingEndpoint(device);
+    if ( !inEndpoint ) {
+        console.log('Was not polling device...', device);
+        return;
+    }
+    inEndpoint.stopPoll();
 }
 
 

@@ -4,8 +4,6 @@ process.on('uncaughtException', function(err) {
     console.log('uncaughtException', err);
 });
 
-this.log = function(str) { console.log(str) }
-
 var fs = require('fs');
 var https_options = {
     key: fs.readFileSync(__dirname+'/server.key'),
@@ -14,15 +12,12 @@ var https_options = {
 var usbDevices = require('./usbDevices.js');
 var websocketDevices = require('./websocketDevices.js');
 var getDeviceModule = function(device) {
-    console.log('getDeviceModule for', device);
     try {
         var type = typeof(device) == 'string' ? device : device.type;
         switch(type) {
             case 'usb':
-                console.log('is usb');
                 return usbDevices;
             case 'websocket':
-                console.log('is websocket');
                 return websocketDevices;
             default:
                 return false;
@@ -105,7 +100,7 @@ var createServer = function(port) {
                 socket.emitError('sendData', ['Device type not supported', device]);
                 return;
             }
-            devmod.sendData(device, data).then(
+            devmod.sendData(device, data, socket).then(
                 function(res){
                     socket.emit('sendData', {res: res});
                     console.log('sendData answered');
@@ -137,7 +132,7 @@ var createServer = function(port) {
         });
 
         socket.on('startPoll', function(device) {
-            console.log('received startPoll: ', device, 'data...');
+            console.log('received startPoll: ', device);
             try {
                 var devmod = getDeviceModule(device);
                 devmod.startPoll(device, socket);
@@ -149,7 +144,7 @@ var createServer = function(port) {
         });
 
         socket.on('stopPoll', function(device) {
-            console.log('received stopPoll: ', device, 'data...');
+            console.log('received stopPoll: ', device);
             try {
                 var devmod = getDeviceModule(device);
                 devmod.stopPoll(device);

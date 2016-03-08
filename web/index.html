@@ -67,6 +67,7 @@
 
     <form class="device">
         <label>pid : vid</label>
+        <input type="hidden" name="device-type" value="usb">
         <input type="text" name="vid" placeholder="VID" value="1305"> :
         <input type="text" name="pid" placeholder="PID" value="1">
         <button class="device-available">Is Available ?</button>
@@ -78,6 +79,7 @@
 
     <form class="device">
         <label>pid : vid</label>
+        <input type="hidden" name="device-type" value="usb">
         <input type="text" name="vid" placeholder="VID" value="2627"> :
         <input type="text" name="pid" placeholder="PID" value="514">
         <button class="device-available">Is Available ?</button>
@@ -88,9 +90,26 @@
     </form>
 
     <button id="devices-available" onclick="areDevicesAvailableClicked()">Are Devices Available</button>
-    <button class="test">Test</button>
 
     <ul id="messages"></ul>
+
+    <hr>
+
+    <h2>Websockets</h2>
+
+    <form class="device">
+        <label>ip : port</label>
+        <input type="hidden" name="device-type" value="websocket">
+        <input type="text" name="ip" placeholder="IP" value="localhost"> :
+        <input type="text" name="port" placeholder="port" value="8001">
+        <button class="device-available">Is Available ?</button>
+        <button class="start-poll">Start polling</button>
+        <button class="stop-poll">Stop polling</button>
+        <button class="send-data"><b>Send data</b></button>
+        <button class="read-data">Read data</button>
+    </form>
+
+
 
     <script>
         var eveconn = new EveConnector('https://localhost:8164', function(){
@@ -98,13 +117,7 @@
         });
 
         isDeviceAvailableClicked = function() {
-            var device = {
-                type: 'usb',
-                params: {
-                    vid: $(this).prevAll('[name=vid]').val(),
-                    pid: $(this).prevAll('[name=pid]').val()
-                }
-            };
+            var device = getDevice($(this));
             eveconn.isDeviceAvailable(device).then(
                 function(res) { console.info("isDeviceAvailable() result:", res); },
                 function(err) { console.error("isDeviceAvailable() error:", err); }
@@ -112,13 +125,7 @@
         };
 
         startPollClicked = function() {
-            var device = {
-                type: 'usb',
-                params: {
-                    vid: $(this).prevAll('[name=vid]').val(),
-                    pid: $(this).prevAll('[name=pid]').val()
-                }
-            };
+            var device = getDevice($(this));
             eveconn.startPoll(device, gotPoll);
         };
 
@@ -127,13 +134,7 @@
         };
 
         stopPollClicked = function() {
-            var device = {
-                type: 'usb',
-                params: {
-                    vid: $(this).prevAll('[name=vid]').val(),
-                    pid: $(this).prevAll('[name=pid]').val()
-                }
-            };
+            var device = getDevice($(this));
             eveconn.stopPoll(device);
         };
 
@@ -148,41 +149,26 @@
             );
         };
 
-        testClicked = function() {
-            var device = {
-                type: 'usb',
-                params: {
-                    vid: $(this).prevAll('[name=vid]').val(),
-                    pid: $(this).prevAll('[name=pid]').val()
-                }
-            };
-
-        };
-
         sendDataClicked = function() {
-            var vid = $(this).prevAll('[name=vid]').val();
-            var pid = $(this).prevAll('[name=pid]').val();
-
-            var source = $('input[name=source]:checked', '#data').val();
-            if ( source == 'base64' ) {
-                var data =  $('#base64', '#data').val();
-                sendData(vid, pid, data);
-                return;
+            var device = getDevice($(this));
+            switch (device.type) {
+                case 'usb':
+                    var source = $('input[name=source]:checked', '#data').val();
+                    if ( source == 'base64' ) {
+                        var data =  $('#base64', '#data').val();
+                        sendData(device, data);
+                        return;
+                    }
+                    $.get( 'test_data/'+source, function( response ) {
+                        sendData(device, response);
+                    });
+                    break;
+                case 'websocket':
+                    alert('not implemented yet on client side');
             }
-
-            $.get( 'test_data/'+source, function( response ) {
-                sendData(vid, pid, response);
-            });
         };
 
-        sendData = function(vid, pid, data) {
-            var device = {
-                type: 'usb',
-                params: {
-                    vid: vid,
-                    pid: pid
-                }
-            };
+        sendData = function(device, data) {
             eveconn.sendData(device, data).then(
                 function(res) { console.info("sendData() result:", res); },
                 function(err) { console.error("sendData() error:", err); }
@@ -190,18 +176,37 @@
         };
 
         readDataClicked = function() {
-            var device = {
-                type: 'usb',
-                params: {
-                    vid: $(this).prevAll('[name=vid]').val(),
-                    pid: $(this).prevAll('[name=pid]').val()
-                }
-            };
+            var device = getDevice($(this));
             eveconn.readData(device).then(
                 function(res) { console.info("readData() result:", res); },
                 function(err) { console.error("readData() error:", err); }
             );
         };
+
+        function getDevice($button) {
+            var type = $button.prevAll('[name=device-type]').val();
+            switch(type) {
+                case 'usb':
+                    return {
+                        type: 'usb',
+                        params: {
+                            vid: $button.prevAll('[name=vid]').val(),
+                            pid: $button.prevAll('[name=pid]').val()
+                        }
+                    }
+                case 'websocket':
+                    return {
+                        type: 'websocket',
+                        params: {
+                            ip: $button.prevAll('[name=ip]').val(),
+                            port: $button.prevAll('[name=port]').val()
+                        }
+                    }
+
+                default:
+                    throw new Error('Invalid type: ' + type);
+            }
+        }
 
         $(document).ready(function(){
             $('form.device').submit(function() { return false; });
@@ -210,7 +215,6 @@
             $('.stop-poll').click(stopPollClicked);
             $('.send-data').click(sendDataClicked);
             $('.read-data').click(readDataClicked);
-            $('.test').click(testClicked);
         });
 
     </script>
