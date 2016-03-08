@@ -27,8 +27,16 @@ var listDevices = function(type) {
 
 var isDeviceAvailable = function(device)
 {
-    var found = usb.findByIds(parseInt(device.params.vid), parseInt(device.params.pid));
-    return ( found !== undefined );
+    console.log('usbDevices::isDeviceAvailable');
+    return when.promise(function(resolve, reject){
+        checkDeviceType(device);
+        var found = usb.findByIds(parseInt(device.params.vid), parseInt(device.params.pid));
+        var res = {
+            available: ( found !== undefined ),
+            device: device
+        }
+        resolve(res);
+    });
 }
 
 var areDevicesAvailable = function(type, devicesList)

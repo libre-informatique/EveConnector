@@ -25,9 +25,18 @@ var listDevices = function() {
 var isDeviceAvailable = function(device)
 {
     checkDeviceType(device);
-    var ip = device.params.ip;
-    var port = device.params.port;
-    return false;
+    return when.promise(function(resolve, reject){
+        checkDeviceType(device);
+        var url = 'ws://' + device.params.ip + ':' + device.params.port;
+        var deviceSocket = require('socket.io-client')(url, {reconnection: false});
+        deviceSocket.on('connect', function(){
+          console.log('connect success');
+          resolve({available: true, device: device});
+        });
+        deviceSocket.on('connect_error', function(){
+          resolve({available: false, device: device});
+        });
+    });
 }
 
 var areDevicesAvailable = function(type, devicesList)

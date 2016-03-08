@@ -64,18 +64,21 @@ var createServer = function(port) {
 
         socket.on('isDeviceAvailable', function(device) {
             console.log('received isDeviceAvailable: ', device);
-            try {
-                var devmod = getDeviceModule(device);
-                var res = {
-                    available: devmod.isDeviceAvailable(device),
-                    device: device
-                };
-                socket.emit('isDeviceAvailable', {res: res});
+            var devmod = getDeviceModule(device);
+            if (!devmod) {
+                socket.emitError('isDeviceAvailable', ['Device type not supported', device]);
+                return;
             }
-            catch(error) {
-                socket.emitError('isDeviceAvailable', error);
-            }
-            console.log('isDeviceAvailable answered');
+            devmod.isDeviceAvailable(device).then(
+                function(res){
+                    socket.emit('isDeviceAvailable', {res: res});
+                    console.log('isDeviceAvailable answered');
+                },
+                function(err){
+                    socket.emitError('isDeviceAvailable', err);
+                    console.log('isDeviceAvailable answered with error: ', err.message);
+                }
+            );
         });
 
         socket.on('areDevicesAvailable', function(query) {
@@ -157,6 +160,22 @@ var createServer = function(port) {
     });
 
 } // end createServer()
+
+
+// tests
+// TODO remove this
+var socket = require('socket.io-client')('ws://localhost:80011', {reconnection: false});
+socket.on('connect', function(){
+  console.log('connect success');
+  socket.on('message', function(data){});
+  socket.on('close', function(){});
+});
+socket.on('connect_error', function(){
+  console.log('connect_error');
+});
+
+
+
 
 // Display some information about this module (based on package.jon)
 require('appinspect').print(module);
