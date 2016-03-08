@@ -83,17 +83,26 @@ var createServer = function(port) {
 
         socket.on('areDevicesAvailable', function(query) {
             console.log('received areDevicesAvailable: ', query);
-            try {
-                var type = query.type;
-                var list = query.params;
-                var devmod = getDeviceModule(type);
-                var res =  devmod.areDevicesAvailable(type, list);
-                socket.emit('areDevicesAvailable', {res: res});
+            var type = query.type;
+            var list = query.params;
+            var devmod = getDeviceModule(type);
+            if (!devmod) {
+                socket.emitError('areDevicesAvailable', ['Device type not supported', type]);
+                return;
             }
-            catch(error) {
-                socket.emitError('areDevicesAvailable', error);
-            }
-            console.log('areDevicesAvailable answered');
+            devmod.areDevicesAvailable(type, list).then(
+                function(res){
+                    if ( Array.isArray(res) ) {
+                        res = res.length ? res[0] : { type: type, params: []};
+                    }
+                    socket.emit('areDevicesAvailable', {res: res});
+                    console.log('areDevicesAvailable answered');
+                },
+                function(err){
+                    socket.emitError('areDevicesAvailable', err);
+                    console.log('areDevicesAvailable answered with error: ', err.message);
+                }
+            );
         });
 
         socket.on('sendData', function(device, data) {

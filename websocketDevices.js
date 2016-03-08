@@ -24,6 +24,7 @@ var listDevices = function() {
 
 var isDeviceAvailable = function(device)
 {
+    console.log('websocketDevices::areDevicesAvailable');
     checkDeviceType(device);
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
@@ -31,6 +32,7 @@ var isDeviceAvailable = function(device)
         var deviceSocket = require('socket.io-client')(url, {reconnection: false});
         deviceSocket.on('connect', function(){
           console.log('connect success');
+          deviceSocket.disconnect();
           resolve({available: true, device: device});
         });
         deviceSocket.on('connect_error', function(){
@@ -41,13 +43,26 @@ var isDeviceAvailable = function(device)
 
 var areDevicesAvailable = function(type, devicesList)
 {
+    console.log('websocketDevices::areDevicesAvailable');
     var available = { type: type, params: []};
+    var checks = [];
     devicesList.forEach(function(d){
         var device = {type: type, params:{ip: d.ip, port: d.port}};
-        if (isDeviceAvailable(device))
-            available.params.push({ip: d.ip, port: d.port});
+        var check = when.promise(function(resolve, reject){
+            isDeviceAvailable(device).then(
+                function(res){
+                    if ( res.available )
+                        available.params.push({ip: d.ip, port: d.port});
+                    resolve(available);
+                },
+                function(err){
+                    reject(err);
+                }
+            );
+        });
+        checks.push(check);
     });
-    return available;
+    return when.all(checks);
 }
 
 var sendData = function(device, data)

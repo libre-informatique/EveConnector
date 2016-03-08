@@ -41,13 +41,26 @@ var isDeviceAvailable = function(device)
 
 var areDevicesAvailable = function(type, devicesList)
 {
+    console.log('usbDevices::areDevicesAvailable');
     var available = { type: type, params: []};
+    var checks = [];
     devicesList.forEach(function(d){
         var device = {type: type, params:{vid: d.vid, pid: d.pid}};
-        if (isDeviceAvailable(device))
-            available.params.push({vid: d.vid, pid: d.pid});
+        var check = when.promise(function(resolve, reject){
+            isDeviceAvailable(device).then(
+                function(res){
+                    if ( res.available )
+                        available.params.push({vid: d.vid, port: d.pid});
+                    resolve(available);
+                },
+                function(err){
+                    reject(err);
+                }
+            );
+        });
+        checks.push(check);
     });
-    return available;
+    return when.all(checks);
 }
 
 var sendData = function(device, data, socket)
