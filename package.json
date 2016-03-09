@@ -4,13 +4,14 @@
   "description": "USB over WebSocket: make your browser communicate with USB through WebSockets",
   "main": "eve-connector-server.js",
   "dependencies": {
+    "appinspect": "^1.0.0",
     "atob": "^2.0.0",
     "btoa": "^1.1.2",
     "express": "^4.13.4",
     "socket.io": "^1.4.5",
+    "socket.io-client": "^1.4.5",
     "usb": "^1.1.1",
-    "when": "^3.7.7",
-    "appinspect": "^1.0.0"
+    "when": "^3.7.7"
   },
   "devDependencies": {},
   "scripts": {
