@@ -4,6 +4,8 @@ var atob = require('atob');
 var btoa = require('btoa');
 var when = require('when');
 
+_deviceSockets = [];
+
 var checkDeviceType = function(device)
 {
     if (!device)
@@ -20,6 +22,41 @@ var checkDeviceType = function(device)
 
 var listDevices = function() {
     return [];
+}
+
+var getDeviceSocket = function(device) {
+    console.log('websocketDevices::getDeviceSocket');
+    return when.promise(function(resolve, reject){
+        var connected = _deviceSockets.find(function(d){
+            return (d.ip == device.params.ip && d.port == device.params.port);
+        });
+        if (connected !== undefined){
+            resolve(connected.socket);
+        }
+        else {
+            connectDevice(device).then(
+                function(socket) { resolve(socket) },
+                function(error) { resolve(error) }
+            );
+        }
+    });
+}
+
+var connectDevice = function(device, options) {
+    console.log('websocketDevices::connectDevice');
+    options = options || {};
+    return when.promise(function(resolve, reject){
+        var url = 'ws://' + device.params.ip + ':' + device.params.port;
+        var deviceSocket = require('socket.io-client')(url, options);
+        deviceSocket.on('connect', function(){
+          console.log('connect success');
+          _deviceSockets.push({ip: device.params.ip, port: device.params.port, socket: deviceSocket});
+          resolve(deviceSocket);
+        });
+        deviceSocket.on('connect_error', function(){
+          reject(new Error('Could not connect to device at ' + url));
+        })
+    });
 }
 
 var isDeviceAvailable = function(device)
@@ -67,11 +104,16 @@ var areDevicesAvailable = function(type, devicesList)
 
 var sendData = function(device, data)
 {
+    console.log('websocketDevices::sendData');
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
-        var ip = device.params.ip;
-        var port = device.params.port;
-        reject('sendData() is not implemented yet for websocket devices');
+        getDeviceSocket(device)
+        .then(function(socket){
+            var bin = atob(data.toString());
+            socket.emit('serial', bin);
+            resolve('sent');
+        })
+        .catch(function(error){ reject(error) });
     });
 }
 
@@ -87,10 +129,15 @@ var readData = function(device, length)
 
 var startPoll = function(device, socket)
 {
+    console.log('Start polling websocket device...', device);
     checkDeviceType(device);
-    var ip = device.params.ip;
-    var port = device.params.port;
-    throw new Error('startPoll() is not implemented yet for websocket devices');
+    getDeviceSocket(device)
+    .then(function(deviceSocket){
+        deviceSocket.on('serial', function(data){
+          socket.emit('websocketPoll', btoa(data));
+        });
+    })
+    .catch(function(error){ return false });
 }
 
 var stopPoll = function(device) {

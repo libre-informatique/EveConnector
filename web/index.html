@@ -24,7 +24,7 @@
         form#data {
             padding: 10px;
             border: 1px solid #ccc;
-            width: 500px;
+            width: 800px;
         }
 
         form.device input[type=text] {
@@ -47,6 +47,7 @@
     </style>
     <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
     <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+    <script src="js/protocol-helpers.class.js"></script>
     <script src="js/eve-connector.js"></script>
 </head>
 
@@ -63,6 +64,12 @@
         <br>
         <label><input type="radio" name="source" value="base64"> Other (base64): </label>
         <input type="text" name="base64" id="base64">
+        <button class="b64char" data="5">ENQ</button>
+        <button class="b64char" data="6">ACK</button>
+        <button class="b64char" data="15">NAK</button>
+        <button class="b64char" data="4">EOT</button>
+        <button id="b64encode">base64 encode</button>
+        <button id="eptMessage">EPT msg</button>
     </form>
 
     <form class="device">
@@ -130,7 +137,12 @@
         };
 
         gotPoll = function(msg) {
-            console.info(msg);
+            var text = atob(msg);
+            if ( text.length == 1)
+                text = 'ascii ' + text.charCodeAt(0) + " = " + ProtocolHelpers.Physical.decode(text);
+            else
+                text = ProtocolHelpers.Physical.getMessage(text);
+            console.info('got poll data:', msg, '('+text+')');
         };
 
         stopPollClicked = function() {
@@ -165,7 +177,12 @@
                     });
                     break;
                 case 'websocket':
-                    alert('not implemented yet on client side');
+                    var source = $('input[name=source]:checked', '#data').val();
+                    if ( source == 'base64' ) {
+                        var data =  $('#base64', '#data').val();
+                        sendData(device, data);
+                    }
+                    break;
             }
         };
 
@@ -183,6 +200,25 @@
                 function(err) { console.error("readData() error:", err); }
             );
         };
+
+        b64charClicked = function() {
+            var asciiCode = parseInt($(this).attr('data'));
+            var b64 = btoa(String.fromCharCode(asciiCode));
+            $('#base64').val(b64);
+            return false;
+        }
+
+        b64encodeClicked = function() {
+            var text = $('#base64').val().trim();
+            $('#base64').val(btoa(text));
+        }
+
+        eptMessageClicked = function() {
+            var message = $('#base64').val().trim();
+            var frame = ProtocolHelpers.Physical.getFrame(message);
+            console.log(frame.length);
+            $('#base64').val(btoa(frame));
+        }
 
         function getDevice($button) {
             var type = $button.prevAll('[name=device-type]').val();
@@ -211,11 +247,15 @@
 
         $(document).ready(function(){
             $('form.device').submit(function() { return false; });
+            $('form#data').submit(function() { return false; });
             $('.device-available').click(isDeviceAvailableClicked);
             $('.start-poll').click(startPollClicked);
             $('.stop-poll').click(stopPollClicked);
             $('.send-data').click(sendDataClicked);
             $('.read-data').click(readDataClicked);
+            $('.b64char').click(b64charClicked);
+            $('#b64encode').click(b64encodeClicked);
+            $('#eptMessage').click(eptMessageClicked);
         });
 
     </script>

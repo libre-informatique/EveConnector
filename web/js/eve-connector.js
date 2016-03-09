@@ -84,7 +84,13 @@ EveConnector = function(uri, directExecute) {
 
     this.startPoll = function(device, callback) {
         this.socket.emit('startPoll', device);
-        this.socket.on('usbPoll', callback);
+        var supported = ['usb', 'websocket'];
+        if ( supported.indexOf(device.type) == -1 ) {
+            log('error', 'Device type not supported:', device.type);
+            return;
+        }
+        var event = device.type + 'Poll';
+        this.socket.on(event, callback);
     };
 
     this.stopPoll = function(device) {
