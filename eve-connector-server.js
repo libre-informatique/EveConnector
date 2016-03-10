@@ -32,7 +32,7 @@ var getDeviceModule = function(device) {
     }
 }
 
-var createServer = function(port) {
+var Server = function(port, https_options) {
 
     // Start server
     //
@@ -54,8 +54,6 @@ var createServer = function(port) {
 
     // WebSockets
     //
-
-
     io.on('connection', function(socket) {
         debug('a user connected');
 
@@ -183,4 +181,4 @@ var createServer = function(port) {
 // Display some information about this module (based on package.jon)
 require('appinspect').print(module);
 
-exports.createServer = createServer;
+exports.Server = Server;
