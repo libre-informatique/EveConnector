@@ -6,4 +6,3 @@ ept-emulator
 web/ept-client.html
 web/js/ept-client.js
 web/js/eve-connector-layer.class.js
-web/js/protocol-helpers.class.js
