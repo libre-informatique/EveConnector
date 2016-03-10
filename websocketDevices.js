@@ -26,7 +26,7 @@ var listDevices = function() {
 }
 
 var getDeviceSocket = function(device) {
-    debug('websocketDevices::getDeviceSocket');
+    //debug('getDeviceSocket');
     return when.promise(function(resolve, reject){
         var connected = _deviceSockets.find(function(d){
             return (d.ip == device.params.ip && d.port == device.params.port);
@@ -44,7 +44,7 @@ var getDeviceSocket = function(device) {
 }
 
 var connectDevice = function(device, options) {
-    debug('websocketDevices::connectDevice');
+    debug('connectDevice()');
     options = options || {};
     return when.promise(function(resolve, reject){
         var url = 'ws://' + device.params.ip + ':' + device.params.port;
@@ -68,7 +68,7 @@ var connectDevice = function(device, options) {
 
 var isDeviceAvailable = function(device)
 {
-    debug('websocketDevices::areDevicesAvailable');
+    debug('isDeviceAvailable()');
     checkDeviceType(device);
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
@@ -87,7 +87,7 @@ var isDeviceAvailable = function(device)
 
 var areDevicesAvailable = function(type, devicesList)
 {
-    debug('websocketDevices::areDevicesAvailable');
+    debug('areDevicesAvailable()');
     var available = { type: type, params: []};
     var checks = [];
     devicesList.forEach(function(d){
