@@ -1,8 +1,12 @@
 var exports = module.exports = {};
 
 process.on('uncaughtException', function(err) {
-    console.log('uncaughtException', err);
+    debug('uncaughtException', err);
 });
+
+var debug = require('debug')('eve-connector:server');
+debug('Debug enabled');
+
 
 var fs = require('fs');
 var https_options = {
@@ -34,36 +38,42 @@ var createServer = function(port) {
     //
     var https = require('https');
     var express = require('express');
-    var app = express();
-    var httpsServer = https.createServer(https_options, app);
+    this.express = express();
+    var httpsServer = https.createServer(https_options, this.express);
     httpsServer.listen(port);
     var io = require('socket.io')(httpsServer);
     console.info('Eve-Connector up and running. Listening on port ' + port);
 
     // Static web pages
     //
-    app.get('/', function (req, res) {
+    this.express.get('/', function (req, res) {
       res.sendFile(__dirname + '/web/index.html');
     });
-    app.use('/js', express.static(__dirname + '/web/js'));
-    app.use('/test_data', express.static(__dirname + '/web/test_data'));
+    this.express.use('/js', express.static(__dirname + '/web/js'));
+    this.express.use('/test_data', express.static(__dirname + '/web/test_data'));
 
     // WebSockets
     //
+
+
     io.on('connection', function(socket) {
-        console.log('a user connected');
+        debug('a user connected');
 
         socket.emitError = function(channel, error) {
             var err = error.message ? error.message : error;
             socket.emit(channel, {err: err});
         }
 
+        socket.on('error', function(err){
+            debug('socket.on(error)', err);
+        });
+
         socket.on('disconnect', function() {
-            console.log('user disconnected');
+            debug('user disconnected');
         });
 
         socket.on('isDeviceAvailable', function(device) {
-            console.log('received isDeviceAvailable: ', device);
+            debug('received isDeviceAvailable: ', device);
             var devmod = getDeviceModule(device);
             if (!devmod) {
                 socket.emitError('isDeviceAvailable', ['Device type not supported', device]);
@@ -72,17 +82,17 @@ var createServer = function(port) {
             devmod.isDeviceAvailable(device).then(
                 function(res){
                     socket.emit('isDeviceAvailable', {res: res});
-                    console.log('isDeviceAvailable answered');
+                    debug('isDeviceAvailable answered');
                 },
                 function(err){
                     socket.emitError('isDeviceAvailable', err);
-                    console.log('isDeviceAvailable answered with error: ', err.message);
+                    debug('isDeviceAvailable answered with error: ', err.message);
                 }
             );
         });
 
         socket.on('areDevicesAvailable', function(query) {
-            console.log('received areDevicesAvailable: ', query);
+            debug('received areDevicesAvailable: ', query);
             var type = query.type;
             var list = query.params;
             var devmod = getDeviceModule(type);
@@ -96,17 +106,17 @@ var createServer = function(port) {
                         res = res.length ? res[0] : { type: type, params: []};
                     }
                     socket.emit('areDevicesAvailable', {res: res});
-                    console.log('areDevicesAvailable answered');
+                    debug('areDevicesAvailable answered');
                 },
                 function(err){
                     socket.emitError('areDevicesAvailable', err);
-                    console.log('areDevicesAvailable answered with error: ', err.message);
+                    debug('areDevicesAvailable answered with error: ', err.message);
                 }
             );
         });
 
         socket.on('sendData', function(device, data) {
-            console.log('received sendData: ', device, 'data...');
+            debug('received sendData: ', device, 'data...');
             var devmod = getDeviceModule(device);
             if (!devmod) {
                 socket.emitError('sendData', ['Device type not supported', device]);
@@ -115,17 +125,17 @@ var createServer = function(port) {
             devmod.sendData(device, data, socket).then(
                 function(res){
                     socket.emit('sendData', {res: res});
-                    console.log('sendData answered');
+                    debug('sendData answered');
                 },
                 function(err){
                     socket.emitError('sendData', err);
-                    console.log('sendData answered with error: ', err.message);
+                    debug('sendData answered with error: ', err.message);
                 }
             );
         });
 
         socket.on('readData', function(device, length) {
-            console.log('received readData: ', device, length);
+            debug('received readData: ', device, length);
             var devmod = getDeviceModule(device);
             if (!devmod) {
                 socket.emitError('sendData', ['Device type not supported', device]);
@@ -134,56 +144,40 @@ var createServer = function(port) {
             devmod.readData(device, length).then(
                 function(res){
                     socket.emit('readData', {res: res});
-                    console.log('readData answered');
+                    debug('readData answered');
                 },
                 function(err){
                     socket.emitError('readData', err);
-                    console.log('readData answered with error: ', err.message);
+                    debug('readData answered with error: ', err.message);
                 }
             );
         });
 
         socket.on('startPoll', function(device) {
-            console.log('received startPoll: ', device);
+            debug('received startPoll: ', device);
             try {
                 var devmod = getDeviceModule(device);
                 devmod.startPoll(device, socket);
             }
             catch(error) {
                 socket.emitError('startPoll', error);
-                console.log('startPoll answered with error:', error);
+                debug('startPoll answered with error:', error);
             }
         });
 
         socket.on('stopPoll', function(device) {
-            console.log('received stopPoll: ', device);
+            debug('received stopPoll: ', device);
             try {
                 var devmod = getDeviceModule(device);
                 devmod.stopPoll(device);
             }
             catch(error) {
                 socket.emitError('stopPoll', error);
-                console.log('stopPoll answered with error:', error);
+                debug('stopPoll answered with error:', error);
             }
         });
     });
-
 } // end createServer()
-
-
-// tests
-// TODO remove this
-var socket = require('socket.io-client')('ws://localhost:80011', {reconnection: false});
-socket.on('connect', function(){
-  console.log('connect success');
-  socket.on('message', function(data){});
-  socket.on('close', function(){});
-});
-socket.on('connect_error', function(){
-  console.log('connect_error');
-});
-
-
 
 
 // Display some information about this module (based on package.jon)

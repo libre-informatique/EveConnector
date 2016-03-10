@@ -4,7 +4,7 @@ var usb = require('usb');
 var atob = require('atob');
 var btoa = require('btoa');
 var when = require('when');
-var nodefn = require('when/node');
+var debug = require('debug')('eve-connector:usb');
 
 // polling USB interfaces
 var _pollingUsb = [];
@@ -27,8 +27,8 @@ var listDevices = function(type) {
 
 var isDeviceAvailable = function(device)
 {
-    console.log('usbDevices::isDeviceAvailable');
     return when.promise(function(resolve, reject){
+        debug('isDeviceAvailable()');
         checkDeviceType(device);
         var found = usb.findByIds(parseInt(device.params.vid), parseInt(device.params.pid));
         var res = {
@@ -41,7 +41,7 @@ var isDeviceAvailable = function(device)
 
 var areDevicesAvailable = function(type, devicesList)
 {
-    console.log('usbDevices::areDevicesAvailable');
+    debug('areDevicesAvailable()');
     var available = { type: type, params: []};
     var checks = [];
     devicesList.forEach(function(d){
@@ -80,15 +80,15 @@ var sendData = function(device, data, socket)
         }
         usbdev.open();
 
-        console.log('Resetting device...');
+        debug('Resetting device...');
         usbdev.reset(function(error){
             error && reject(error);
-            console.log('Device reset');
+            debug('Device reset');
             try {
                 var interface = claimUsbInterface(vid, pid);
                 var outEp = getEndpoint(interface, 'out');
                 outEp.on('error', function(epError){
-                    console.log('outEp error', epError)
+                    debug('outEp error', epError)
                     wasPolling && startPoll(device);
                     reject(epError);
                 });
@@ -96,9 +96,9 @@ var sendData = function(device, data, socket)
                 // decode base64 data
                 var bin = new Buffer(atob(data.toString()), 'binary');
 
-                console.log('sending data... ');
+                debug('sending data... ');
                 outEp.transfer(bin, function(epError, tf_data){
-                    console.log('...data sent to USB');
+                    debug('...data sent to USB');
                     wasPolling && startPoll(device, socket);
                     epError && reject(epError);
                     resolve(tf_data);
@@ -116,22 +116,22 @@ var sendData = function(device, data, socket)
 
 var readData = function(device, length)
 {
-    console.log('usbDevices::readData');
+    debug('usbDevices::readData');
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
         var interface = claimUsbInterface(device.params.vid, device.params.pid);
         var inEp = getEndpoint(interface, 'in');
 
         inEp.on('error', function(error) {
-            console.log('inEp error', error);
+            debug('inEp error', error);
             reject(error);
         });
 
         length = length || inEp.descriptor.wMaxPacketSize;
-        console.log('Start reading in endpoint on device', device);
+        debug('Start reading in endpoint on device', device);
         inEp.transfer(length, function(error, data){
             error && reject(error);
-            console.log('readData:', data);
+            debug('readData:', data);
             // we send back base64 encoded data
             resolve(data != undefined ? btoa(data) : '');
         });
@@ -157,7 +157,7 @@ var startPoll = function(device, socket)
     checkDeviceType(device);
 
     if ( isPolling(device) ) {
-        console.log('Already polling device...', device);
+        debug('Already polling device...', device);
         return;
     }
 
@@ -165,11 +165,11 @@ var startPoll = function(device, socket)
     var inEp = getEndpoint(interface, 'in');
 
     inEp.on('error', function(error) {
-        console.log('inEp polling error', error);
+        debug('inEp polling error', error);
     });
 
     inEp.on('end', function(error) {
-        console.log('inEp polling ended');
+        debug('inEp polling ended');
 
         var polling = _pollingUsb.find(function(item){
             return ( item.endpoint == inEp );
@@ -182,11 +182,11 @@ var startPoll = function(device, socket)
 
     inEp.on('data', function(data) {
         if ( data && data.length ) {
-            console.log('inEp data received:', data, data.length, device);
+            debug('inEp data received:', data, data.length, device);
             socket.emit('usbPoll', btoa(data));
         }
     });
-    console.log('Start polling device...', device);
+    debug('Start polling device...', device);
     inEp.startPoll();
     _pollingUsb.push({
         vid: device.params.vid,
@@ -200,7 +200,7 @@ var stopPoll = function(device)
     checkDeviceType(device);
     var inEndpoint = getPollingEndpoint(device);
     if ( !inEndpoint ) {
-        console.log('Was not polling device...', device);
+        debug('Was not polling device...', device);
         return;
     }
     inEndpoint.stopPoll();
@@ -243,7 +243,7 @@ var getEndpoint = function(interface, direction)
 
 var test = function(device)
 {
-    console.log('test');
+    debug('test');
     startPoll(device);
     setTimeout(function () {
         //throw(['this is the error']);

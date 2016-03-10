@@ -27,7 +27,7 @@
  * @param: directExecute  Can be undefined or a function(details) to execute as soon as the object is created
  */
 
-EveConnector = function(uri, directExecute) {
+var EveConnector = function(uri, directExecute) {
 
     // Debug functions
     this.log = function(type, msg, obj){
@@ -54,7 +54,7 @@ EveConnector = function(uri, directExecute) {
     this.socket = io(uri);
 
     this.socket.on('connect', function(){
-        log('info', 'Connected', this);
+        //log('info', 'Connected', this);
         ( typeof(directExecute) == 'function' ) && directExecute();
     });
     this.socket.on('connect_error', function(err){

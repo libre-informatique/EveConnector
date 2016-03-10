@@ -3,6 +3,7 @@ var exports = module.exports = {};
 var atob = require('atob');
 var btoa = require('btoa');
 var when = require('when');
+var debug = require('debug')('eve-connector:websocket');
 
 _deviceSockets = [];
 
@@ -25,7 +26,7 @@ var listDevices = function() {
 }
 
 var getDeviceSocket = function(device) {
-    console.log('websocketDevices::getDeviceSocket');
+    debug('websocketDevices::getDeviceSocket');
     return when.promise(function(resolve, reject){
         var connected = _deviceSockets.find(function(d){
             return (d.ip == device.params.ip && d.port == device.params.port);
@@ -36,39 +37,45 @@ var getDeviceSocket = function(device) {
         else {
             connectDevice(device).then(
                 function(socket) { resolve(socket) },
-                function(error) { resolve(error) }
+                function(error) { reject(error) }
             );
         }
     });
 }
 
 var connectDevice = function(device, options) {
-    console.log('websocketDevices::connectDevice');
+    debug('websocketDevices::connectDevice');
     options = options || {};
     return when.promise(function(resolve, reject){
         var url = 'ws://' + device.params.ip + ':' + device.params.port;
         var deviceSocket = require('socket.io-client')(url, options);
         deviceSocket.on('connect', function(){
-          console.log('connect success');
-          _deviceSockets.push({ip: device.params.ip, port: device.params.port, socket: deviceSocket});
-          resolve(deviceSocket);
+            debug('deviceSocket connected');
+            _deviceSockets.push({ip: device.params.ip, port: device.params.port, socket: deviceSocket});
+            resolve(deviceSocket);
+        });
+        deviceSocket.on('disconnect', function(){
+            debug('deviceSocket disconnected');
         });
         deviceSocket.on('connect_error', function(){
-          reject(new Error('Could not connect to device at ' + url));
-        })
+          reject(new Error('Could not connect to websocket device at ' + url));
+        });
+        deviceSocket.on('error', function(err){
+            reject(err);
+        });
     });
 }
 
 var isDeviceAvailable = function(device)
 {
-    console.log('websocketDevices::areDevicesAvailable');
+    debug('websocketDevices::areDevicesAvailable');
     checkDeviceType(device);
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
         var url = 'ws://' + device.params.ip + ':' + device.params.port;
         var deviceSocket = require('socket.io-client')(url, {reconnection: false});
         deviceSocket.on('connect', function(){
-          console.log('connect success');
+          debug('connect success');
           deviceSocket.disconnect();
           resolve({available: true, device: device});
         });
@@ -80,7 +87,7 @@ var isDeviceAvailable = function(device)
 
 var areDevicesAvailable = function(type, devicesList)
 {
-    console.log('websocketDevices::areDevicesAvailable');
+    debug('websocketDevices::areDevicesAvailable');
     var available = { type: type, params: []};
     var checks = [];
     devicesList.forEach(function(d){
@@ -104,16 +111,16 @@ var areDevicesAvailable = function(type, devicesList)
 
 var sendData = function(device, data)
 {
-    console.log('websocketDevices::sendData');
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
         getDeviceSocket(device)
-        .then(function(socket){
-            var bin = atob(data.toString());
-            socket.emit('serial', bin);
-            resolve('sent');
-        })
-        .catch(function(error){ reject(error) });
+            .then(function(socket){
+                var bin = atob(data.toString());
+                socket.emit('serial', bin);
+                resolve('sent');
+            })
+            .catch(function(error){ reject(error) })
+        ;
     });
 }
 
@@ -129,11 +136,12 @@ var readData = function(device, length)
 
 var startPoll = function(device, socket)
 {
-    console.log('Start polling websocket device...', device);
+    debug('Start polling websocket device...', device);
     checkDeviceType(device);
     getDeviceSocket(device)
     .then(function(deviceSocket){
         deviceSocket.on('serial', function(data){
+          debug('sending back data', data);
           socket.emit('websocketPoll', btoa(data));
         });
     })
@@ -150,10 +158,10 @@ var stopPoll = function(device) {
 var test = function(device)
 {
     checkDeviceType(device);
-    console.log('test starting...');
+    debug('test starting...');
     setTimeout(function () {
         //throw(['this is the error']);
-        console.log('test end');
+        debug('test end');
     }, 1000);
 }
 

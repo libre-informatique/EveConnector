@@ -1,12 +1,14 @@
 {
   "name": "eve-connector",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "USB over WebSocket: make your browser communicate with USB through WebSockets",
   "main": "eve-connector-server.js",
   "dependencies": {
     "appinspect": "^1.0.0",
     "atob": "^2.0.0",
     "btoa": "^1.1.2",
+    "debug": "^2.2.0",
+    "ept-emulator": "^1.1.0",
     "express": "^4.13.4",
     "socket.io": "^1.4.5",
     "socket.io-client": "^1.4.5",
@@ -30,5 +32,15 @@
   "bugs": {
     "url": "https://github.com/libre-informatique/EveConnector/issues"
   },
-  "homepage": "https://github.com/libre-informatique/EveConnector#readme"
+  "homepage": "https://github.com/libre-informatique/EveConnector#readme",
+  "maintainers": [
+    {
+      "name": "betaglop",
+      "email": "beta@e-glop.net"
+    },
+    {
+      "name": "marcoslibre",
+      "email": "marcos.bezerra@libre-informatique.fr"
+    }
+  ]
 }

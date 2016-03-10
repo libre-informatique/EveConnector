@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8" />
+    <title>Libre Informatique - Ingenico EPT Emulator - Tester</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/ept-emulator/web-prompt.class.js"></script>
+    <script src="/js/ept-emulator/protocol-helpers.class.js"></script>
+    <script src="/js/ept-emulator/workflows.class.js"></script>
+    <script src="/js/ept-emulator/physical-layer.class.js"></script>
+    <script src="/js/ept-emulator/logical-layer.class.js"></script>
+    <script src="/js/ept-emulator/application-layer.class.js"></script>
+    <script src="/js/eve-connector-layer.class.js"></script>
+    <script src="/js/eve-connector.js"></script>
+    <script>
+        var evelayer = new EveConnectorLayer(false, 'B8', 978, 1, 0, 0);
+        evelayer.application.logical.physical.clear(['stxProcessed']);
+        evelayer.createClient('wss://localhost:8164', { type: 'websocket', params: { ip: 'localhost', port: 8001 }});
+        function submitForm(form){
+            form.elements['info'].value = '';
+            evelayer.prepareTransaction(form.elements['amount'].value, form.elements['transaction_id'].value);
+            return false;
+        }
+        console.info2 = console.info;
+        console.info = function(){
+            var elt = document.getElementById('info');
+            for ( var i = 0 ; i < arguments.length ; i++ )
+            {
+                if ( i > 0 ) elt.value += " ";
+                elt.value += arguments[i];
+            }
+            elt.value += "\n";
+            console.info2.apply(console, arguments);
+        }
+        console.log2 = console.log;
+        console.log = function(){
+            var elt = document.getElementById('log');
+            for ( var i = 0 ; i < arguments.length ; i++ )
+            {
+                if ( i > 0 ) elt.value += " ";
+                elt.value += arguments[i];
+            }
+            elt.value += "\n";
+            console.log2.apply(console, arguments);
+        }
+        console.error2 = console.error;
+        console.error = function(){
+            var elt = document.getElementById('error');
+            for ( var i = 0 ; i < arguments.length ; i++ )
+            {
+                if ( i > 0 ) elt.value += " ";
+                elt.value += arguments[i];
+            }
+            elt.value += "\n";
+            console.error2.apply(console, arguments);
+        }
+    </script>
+    <style>
+        h2 { margin-bottom: 2px; }
+        .logs div { float: left; }
+    </style>
+</head>
+<body>
+    <h1>Ingenico EPT Emulator</h1>
+    <pre>
++---------------------------------------------------------------+
+|                         EPT emulator                          |
+|      Concert Protocole, aka "Protocole Caisse" in french.     |
+| © 2016 Libre Informatique [http://www.libre-informatique.fr/] |
++---------------------------------------------------------------+
+
+Emulated EPT: iCT250, iWL220
+
+Launch `node logical-server.js` to get this webpage all its potential
+    </pre>
+    <form action="#" method="get" onsubmit="javascript: return submitForm(this);">
+        <div>
+            <h2>Your request</h2>
+            <table>
+                <tr><td>Amount:</td><td><input type="number" value="" name="amount" /></td></tr>
+                <tr><td>Transaction:</td><td><input type="number" value="" name="transaction_id" /></td></tr>
+                <tr><td></td><td><input type="submit" name="submit" value="submit" /></td></tr>
+            </table>
+        </div>
+        <div class="logs">
+            <div>
+                <h2>Exchanges</h2>
+                <textarea id="info" name="info" rows="23" cols="72"></textarea>
+            </div>
+            <div>
+                <h2>Log</h2>
+                <textarea id="log" name="log" rows="12" cols="50"></textarea>
+            </div>
+            <div>
+                <h2>Errors</h2>
+                <textarea id="error" name="error" rows="6" cols="50"></textarea>
+            </div>
+        </div>
+    </form>
+</body>
+</html>
