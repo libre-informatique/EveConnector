@@ -153,14 +153,21 @@ var Server = function(port, https_options) {
 
         socket.on('startPoll', function(device) {
             debug('received startPoll: ', device);
-            try {
-                var devmod = getDeviceModule(device);
-                devmod.startPoll(device, socket);
+            var devmod = getDeviceModule(device);
+            if (!devmod) {
+                socket.emitError('startPoll', ['Device type not supported', device]);
+                return;
             }
-            catch(error) {
-                socket.emitError('startPoll', error);
-                debug('startPoll answered with error:', error);
-            }
+            devmod.startPoll(device, socket).then(
+                function(res){
+                    socket.emit('startPoll', {res: res});
+                    debug('startPoll answered');
+                },
+                function(err){
+                    socket.emitError('startPoll', err);
+                    debug('startPoll answered with error: ', err.message);
+                }
+            );
         });
 
         socket.on('stopPoll', function(device) {

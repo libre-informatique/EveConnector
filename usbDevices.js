@@ -116,7 +116,7 @@ var sendData = function(device, data, socket)
 
 var readData = function(device, length)
 {
-    debug('usbDevices::readData');
+    debug('readData()');
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
         var interface = claimUsbInterface(device.params.vid, device.params.pid);
@@ -154,44 +154,48 @@ var getPollingEndpoint = function(device) {
 
 var startPoll = function(device, socket)
 {
-    checkDeviceType(device);
+    return when.promise(function(resolve, reject){
+        checkDeviceType(device);
 
-    if ( isPolling(device) ) {
-        debug('Already polling device...', device);
-        return;
-    }
-
-    var interface = claimUsbInterface(device.params.vid, device.params.pid);
-    var inEp = getEndpoint(interface, 'in');
-
-    inEp.on('error', function(error) {
-        debug('inEp polling error', error);
-    });
-
-    inEp.on('end', function(error) {
-        debug('inEp polling ended');
-
-        var polling = _pollingUsb.find(function(item){
-            return ( item.endpoint == inEp );
-        });
-        if ( polling !== undefined )
-            _pollingUsb.splice(_pollingUsb.indexOf(polling), 1);
-
-        inEp.removeListener('data');
-    });
-
-    inEp.on('data', function(data) {
-        if ( data && data.length ) {
-            debug('inEp data received:', data, data.length, device);
-            socket.emit('usbPoll', btoa(data));
+        if ( isPolling(device) ) {
+            debug('Already polling device...', device);
+            return resolve(true);
+            debug('we should not get there');
         }
-    });
-    debug('Start polling device...', device);
-    inEp.startPoll();
-    _pollingUsb.push({
-        vid: device.params.vid,
-        pid: device.params.pid,
-        endpoint: inEp
+
+        var interface = claimUsbInterface(device.params.vid, device.params.pid);
+        var inEp = getEndpoint(interface, 'in');
+
+        inEp.on('error', function(error) {
+            debug('inEp polling error', error);
+        });
+
+        inEp.on('end', function(error) {
+            debug('inEp polling ended');
+
+            var polling = _pollingUsb.find(function(item){
+                return ( item.endpoint == inEp );
+            });
+            if ( polling !== undefined )
+                _pollingUsb.splice(_pollingUsb.indexOf(polling), 1);
+
+            inEp.removeListener('data');
+        });
+
+        inEp.on('data', function(data) {
+            if ( data && data.length ) {
+                debug('inEp data received:', data, data.length, device);
+                socket.emit('usbPoll', btoa(data));
+            }
+        });
+        debug('Start polling device...', device);
+        inEp.startPoll();
+        _pollingUsb.push({
+            vid: device.params.vid,
+            pid: device.params.pid,
+            endpoint: inEp
+        });
+        resolve(true);
     });
 }
 

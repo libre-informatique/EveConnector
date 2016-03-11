@@ -26,7 +26,7 @@ var listDevices = function() {
 }
 
 var getDeviceSocket = function(device) {
-    //debug('getDeviceSocket');
+    debug('getDeviceSocket');
     return when.promise(function(resolve, reject){
         var connected = _deviceSockets.find(function(d){
             return (d.ip == device.params.ip && d.port == device.params.port);
@@ -137,15 +137,18 @@ var readData = function(device, length)
 var startPoll = function(device, socket)
 {
     debug('Start polling websocket device...', device);
-    checkDeviceType(device);
-    getDeviceSocket(device)
-    .then(function(deviceSocket){
-        deviceSocket.on('serial', function(data){
-          debug('sending back data', data);
-          socket.emit('websocketPoll', btoa(data));
-        });
-    })
-    .catch(function(error){ return false });
+    return when.promise(function(resolve, reject){
+        checkDeviceType(device);
+        getDeviceSocket(device)
+        .then(function(deviceSocket){
+            deviceSocket.on('serial', function(data){
+              debug('sending back data', data);
+              socket.emit('websocketPoll', btoa(data));
+            });
+            resolve(true);
+        })
+        .catch(function(error){ reject(error) });        
+    });
 }
 
 var stopPoll = function(device) {

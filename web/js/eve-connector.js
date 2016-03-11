@@ -83,14 +83,23 @@ var EveConnector = function(uri, directExecute) {
     };
 
     this.startPoll = function(device, callback) {
-        this.socket.emit('startPoll', device);
-        var supported = ['usb', 'websocket'];
-        if ( supported.indexOf(device.type) == -1 ) {
-            log('error', 'Device type not supported:', device.type);
-            return;
-        }
-        var event = device.type + 'Poll';
-        this.socket.on(event, callback);
+        var socket = this.socket;
+        return new Promise(function(resolve, reject){
+            var supported = ['usb', 'websocket'];
+            if ( supported.indexOf(device.type) == -1 ) {
+                reject('error', 'Device type not supported:', device.type);
+            }
+            socket.emit('startPoll', device);
+            socket.on('startPoll', function(msg) {
+                if (msg.err)
+                    reject(msg.err);
+                else {
+                    var event = device.type + 'Poll';
+                    socket.on(event, callback);
+                    resolve(msg);
+                }
+            });
+        });
     };
 
     this.stopPoll = function(device) {
