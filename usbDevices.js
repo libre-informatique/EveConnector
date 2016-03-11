@@ -160,7 +160,6 @@ var startPoll = function(device, socket)
         if ( isPolling(device) ) {
             debug('Already polling device...', device);
             return resolve(true);
-            debug('we should not get there');
         }
 
         var interface = claimUsbInterface(device.params.vid, device.params.pid);

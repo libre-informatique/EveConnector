@@ -4,5 +4,4 @@ var https_options = {
     cert: fs.readFileSync(__dirname + "/server.crt")
 }
 
-var EC = require('./eve-connector-server.js')
-var server = new EC.Server(8164, https_options);
+var EC = require('./eve-connector-server.js').createServer(8164, https_options);

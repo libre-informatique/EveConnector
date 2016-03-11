@@ -188,4 +188,6 @@ var Server = function(port, https_options) {
 // Display some information about this module (based on package.jon)
 require('appinspect').print(module);
 
-exports.Server = Server;
+exports.createServer = function(port, https_options){
+    return new Server(port, https_options);
+}
