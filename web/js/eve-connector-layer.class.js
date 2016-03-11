@@ -17,14 +17,14 @@ var EveConnectorLayer = function(interactive, pos, currency, mod, type, ind) {
         : new ApplicationLayer(interactive, pos, currency, mod, type, ind);
     this.device     = {};
     this.eveconn    = {};
-    
+
     // overloads the PhysicalLayer to use an EveConnector instead of a direct connection
     this.application.logical.physical.createClient = function(eveConnectorURL){
         current.eveconn = new EveConnector(eveConnectorURL, function(){
             current._call('clientConnection');
         });
     };
-    
+
     /**
      * function createClient
      *
@@ -35,11 +35,11 @@ var EveConnectorLayer = function(interactive, pos, currency, mod, type, ind) {
         this.device = device;
         return this.application.createClient(eveConnectorUrl);
     }
-    
+
     this.prepareTransaction = function(amount, private){
         this.application.prepareTransaction(amount, private);
     }
-    
+
     this._call = function(name, data){
         this.application.logical.physical._call(name, data);
     }
@@ -51,6 +51,12 @@ var EveConnectorLayer = function(interactive, pos, currency, mod, type, ind) {
         .on('clientConnection', function(){
             current.eveconn.startPoll(current.device, function(msg){
                 current._call('gotPoll', msg);
+            })
+            .then(function(res){
+                console.info('Polling device...', current.device);
+            })
+            .catch(function(err){
+                console.error('Could not stat polling device', current.device, err);
             });
         })
         .on('send', function(data){
@@ -66,7 +72,7 @@ var EveConnectorLayer = function(interactive, pos, currency, mod, type, ind) {
                         console.error('No device available.');
                         return;
                     }
-                    
+
                 },
                 function(err){
                     console.error('Device in error.');

@@ -144,10 +144,12 @@
 
         gotPoll = function(msg) {
             var text = atob(msg);
-            if ( text.length == 1)
-                text = 'ascii ' + text.charCodeAt(0) + " = " + ProtocolHelpers.Physical.decode(text);
-            else
-                text = ProtocolHelpers.Physical.getMessage(text);
+            if (window.ProtocolHelpers) {
+                if ( text.length == 1)
+                    text = 'ascii ' + text.charCodeAt(0) + " = " + ProtocolHelpers.Physical.decode(text);
+                else
+                    text = ProtocolHelpers.Physical.getMessage(text);
+            }
             console.info('got poll data:', msg, '('+text+')');
         };
 
@@ -220,10 +222,12 @@
         }
 
         eptMessageClicked = function() {
-            var message = $('#base64').val().trim();
-            var frame = ProtocolHelpers.Physical.getFrame(message);
-            console.log(frame.length);
-            $('#base64').val(btoa(frame));
+            if (window.ProtocolHelpers) {
+                var message = $('#base64').val().trim();
+                var frame = ProtocolHelpers.Physical.getFrame(message);
+                console.log(frame.length);
+                $('#base64').val(btoa(frame));
+            }
         }
 
         function getDevice($button) {

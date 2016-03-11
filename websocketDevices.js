@@ -142,12 +142,12 @@ var startPoll = function(device, socket)
         getDeviceSocket(device)
         .then(function(deviceSocket){
             deviceSocket.on('serial', function(data){
-              debug('sending back data', data);
+              debug('got poll data', data);
               socket.emit('websocketPoll', btoa(data));
             });
             resolve(true);
         })
-        .catch(function(error){ reject(error) });        
+        .catch(function(error){ reject(error) });
     });
 }
 
