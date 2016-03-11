@@ -135,7 +135,7 @@
             var device = getDevice($(this));
             eveconn.startPoll(device, gotPoll)
             .then(function(res){
-                console.info('Polling started...');
+                console.info('Polling...');
             })
             .catch(function(err){
                 console.error('Could not stat polling device', device, err);
