@@ -217,7 +217,17 @@
         }
 
         b64encodeClicked = function() {
+            var rep = {
+                '<ack>': String.fromCharCode(6),
+                '<etb>': String.fromCharCode(23),
+                '<esc>': String.fromCharCode(27),
+                '<can>': String.fromCharCode(24),
+                '<rs>' : String.fromCharCode(30)
+            }
             var text = $('#base64').val().trim();
+            for (var x in rep) {
+                text = text.replace(new RegExp(x, 'g'), rep[x]);
+            }
             $('#base64').val(btoa(text));
         }
 

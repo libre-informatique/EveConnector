@@ -50,7 +50,7 @@ var areDevicesAvailable = function(type, devicesList)
             isDeviceAvailable(device).then(
                 function(res){
                     if ( res.available )
-                        available.params.push({vid: d.vid, port: d.pid});
+                        available.params.push({vid: d.vid, pid: d.pid});
                     resolve(available);
                 },
                 function(err){

@@ -55,7 +55,7 @@ var Server = function(port, https_options) {
     // WebSockets
     //
     io.on('connection', function(socket) {
-        debug('a user connected');
+        debug('a user connected', socket.id);
 
         socket.emitError = function(channel, error) {
             var err = error.message ? error.message : error;
@@ -67,7 +67,7 @@ var Server = function(port, https_options) {
         });
 
         socket.on('disconnect', function() {
-            debug('user disconnected');
+            debug('user disconnected', socket.id);
         });
 
         socket.on('isDeviceAvailable', function(device) {
