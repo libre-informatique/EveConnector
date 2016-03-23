@@ -119,10 +119,12 @@ var EveConnector = function(uri, directExecute) {
     };
 
     this.sendData = function(device, data) {
+        //console.info('sendData()...');
         var socket = this.socket;
         return new Promise(function(resolve, reject){
             socket.emit('sendData', device, data);
-            socket.on('sendData', function(msg) {
+            socket.once('sendData', function(msg) {
+              //console.info('...sendData()', msg);
                 if (msg.err)
                     reject(msg.err);
                 resolve(msg.res);
@@ -131,10 +133,12 @@ var EveConnector = function(uri, directExecute) {
     };
 
     this.readData = function(device, data) {
+      //console.info('readData()...');
         var socket = this.socket;
         return new Promise(function(resolve, reject){
             socket.emit('readData', device, data);
-            socket.on('readData', function(msg) {
+            socket.once('readData', function(msg) {
+                //console.info('...readData()', msg);
                 if (msg.err)
                     reject(msg.err);
                 resolve(msg.res);
