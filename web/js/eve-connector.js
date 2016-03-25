@@ -23,15 +23,15 @@
 
 /**
  * Depends on socket.io (io must be in the global namespace)
- * @param: uri            The uri to call
- * @param: directExecute  Can be undefined or a function(details) to execute as soon as the object is created
+ * @param {string} uri              The uri to call
+ * @param {function} directExecute  Can be undefined or a function(details) to execute as soon as the object is created
+ * @returns {EveConnector}
  */
-
 var EveConnector = function(uri, directExecute) {
 
     // Debug functions
     this.log = function(type, msg, obj){
-      if ( window.location.hash != '#debug' )
+      if (window.location.hash !== '#debug' )
         return;
       switch ( type ) {
         case 'error':
@@ -47,15 +47,21 @@ var EveConnector = function(uri, directExecute) {
     };
     var log      = this.log;
 
-    var onError = function(){ }
+    var onError = function(){ };
 
     // Starts the connection to the server
     // (io must be in the global namespace: load socket.io before this file)
-    this.socket = io(uri);
+    var opts = {
+        'reconnection': true,
+        'reconnectionDelay': 1000,
+        'reconnectionDelayMax' : 5000,
+        'reconnectionAttempts': 3
+    };
+    this.socket = io(uri, opts);
 
     this.socket.on('connect', function(){
-        //log('info', 'Connected', this);
-        ( typeof(directExecute) == 'function' ) && directExecute();
+        log('info', 'Connected', this);
+        ( typeof(directExecute) === 'function' ) && directExecute();
     });
     this.socket.on('connect_error', function(err){
         log('error', 'connect_error', err);
@@ -68,6 +74,10 @@ var EveConnector = function(uri, directExecute) {
     this.socket.on('error', function(err){
         log('error', 'socket error', err);
         onError();
+    });
+    this.socket.on('reconnecting', function(nb){
+        log('info', 'socket reconnecting', nb);
+        if ( nb >= 5 ) this.io.reconnection(false);
     });
 
     this.isDeviceAvailable = function(device) {
@@ -86,7 +96,7 @@ var EveConnector = function(uri, directExecute) {
         var socket = this.socket;
         return new Promise(function(resolve, reject){
             var supported = ['usb', 'websocket'];
-            if ( supported.indexOf(device.type) == -1 ) {
+            if ( supported.indexOf(device.type) === -1 ) {
                 reject('error', 'Device type not supported:', device.type);
             }
             socket.emit('startPoll', device);
@@ -145,4 +155,4 @@ var EveConnector = function(uri, directExecute) {
             });
         });
     };
-}
+};
