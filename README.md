@@ -65,6 +65,14 @@ ls -al /dev/bus/usb/[bus]/[device]
 
 This file should be owned by group "plugdev" and have group write permissions.
 
+Debugging
+---------
+
+To enable debug messages in the terminal :
+
+```
+export DEBUG=eve-connector:*
+```
 
 But... why "EveConnector"?
 ---------------------------
