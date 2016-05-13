@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Node.js WS server</title>
+    <title>EveConnector TEST page</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * {
@@ -12,37 +12,9 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
-            font: 13px Helvetica, Arial;
-        }
-
-        form.device, form#data {
-            margin: 20px;
-        }
-
-        form#data {
             padding: 10px;
-            border: 1px solid #ccc;
-            width: 800px;
-        }
-
-        form.device input[type=text] {
-            width: 50px;
-        }
-
-        #messages {
-            list-style-type: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        #messages li {
-            padding: 5px 10px;
-        }
-
-        #messages li:nth-child(odd) {
-            background: #eee;
+            font: 13px Courier, monospace;
         }
     </style>
     <script src="/socket.io/socket.io.js"></script>
@@ -52,233 +24,10 @@
 </head>
 
 <body>
-    <h1>EveConnector test page</h1>
+    <h1>EveConnector</h1>
     <p><a href="https://github.com/libre-informatique/EveConnector.git" target="_blank">Fork it on GitHub</a></p>
 
-    <form id="data">
-        <strong>DATA</strong>
-        <br>
-        <label><input type="radio" name="source" value="star_b64"> Star printer data</label>
-        <br>
-        <label><input type="radio" name="source" value="boca_b64"> Boca printer data</label>
-        <br>
-        <label><input type="radio" name="source" value="base64"> Other (base64): </label>
-        <input type="text" name="base64" id="base64">
-        <button class="b64char" data="5">ENQ</button>
-        <button class="b64char" data="6">ACK</button>
-        <button class="b64char" data="15">NAK</button>
-        <button class="b64char" data="4">EOT</button>
-        <button id="b64encode">base64 encode</button>
-        <button id="eptMessage">EPT msg</button>
-    </form>
-
-    <form class="device">
-        <label>pid : vid</label>
-        <input type="hidden" name="device-type" value="usb">
-        <input type="text" name="vid" placeholder="VID" value="1305"> :
-        <input type="text" name="pid" placeholder="PID" value="1">
-        <button class="device-available">Is Available ?</button>
-        <button class="start-poll">Start polling</button>
-        <button class="stop-poll">Stop polling</button>
-        <button class="send-data"><b>Send data</b></button>
-        <button class="read-data">Read data</button>
-    </form>
-
-    <form class="device">
-        <label>pid : vid</label>
-        <input type="hidden" name="device-type" value="usb">
-        <input type="text" name="vid" placeholder="VID" value="2627"> :
-        <input type="text" name="pid" placeholder="PID" value="514">
-        <button class="device-available">Is Available ?</button>
-        <button class="start-poll">Start polling</button>
-        <button class="stop-poll">Stop polling</button>
-        <button class="send-data"><b>Send data</b></button>
-        <button class="read-data">Read data</button>
-    </form>
-
-    <button id="devices-available" onclick="areDevicesAvailableClicked()">Are Devices Available</button>
-
-    <ul id="messages"></ul>
-
-    <hr>
-
-    <h2>Websockets</h2>
-
-    <form class="device">
-        <label>ip : port</label>
-        <input type="hidden" name="device-type" value="websocket">
-        <input type="text" name="ip" placeholder="IP" value="localhost"> :
-        <input type="text" name="port" placeholder="port" value="8001">
-        <button class="device-available">Is Available ?</button>
-        <button class="start-poll">Start polling</button>
-        <button class="stop-poll">Stop polling</button>
-        <button class="send-data"><b>Send data</b></button>
-        <button class="read-data">Read data</button>
-    </form>
-
-
-
-    <script>
-        var eveconn = new EveConnector('https://localhost:8164', function(){
-            console.log('directExecute');
-        });
-
-        isDeviceAvailableClicked = function() {
-            var device = getDevice($(this));
-            eveconn.isDeviceAvailable(device).then(
-                function(res) { console.info("isDeviceAvailable() result:", res); },
-                function(err) { console.error("isDeviceAvailable() error:", err); }
-            );
-        };
-
-        startPollClicked = function() {
-            var device = getDevice($(this));
-            eveconn.startPoll(device, gotPoll)
-            .then(function(res){
-                console.info('Polling...');
-            })
-            .catch(function(err){
-                console.error('Could not stat polling device', device, err);
-            });
-        };
-
-        gotPoll = function(msg) {
-            var text = atob(msg);
-            if (window.ProtocolHelpers) {
-                if ( text.length == 1)
-                    text = 'ascii ' + text.charCodeAt(0) + " = " + ProtocolHelpers.Physical.decode(text);
-                else
-                    text = ProtocolHelpers.Physical.getMessage(text);
-            }
-            console.info('got poll data:', msg, '('+text+')');
-        };
-
-        stopPollClicked = function() {
-            var device = getDevice($(this));
-            eveconn.stopPoll(device);
-        };
-
-        areDevicesAvailableClicked = function() {
-            console.log($(this));
-            var query = {
-                type: 'usb',
-                params: [{vid: 1305, pid:1}, {vid: 1333, pid: 1}, {vid: 2627, pid: 514}]
-            };
-            eveconn.areDevicesAvailable(query).then(
-                function(res) { console.info("areDevicesAvailable() result:", res); },
-                function(err) { console.error("areDevicesAvailable() error:", err); }
-            );
-        };
-
-        sendDataClicked = function() {
-            var device = getDevice($(this));
-            switch (device.type) {
-                case 'usb':
-                    var source = $('input[name=source]:checked', '#data').val();
-                    if ( source == 'base64' ) {
-                        var data =  $('#base64', '#data').val();
-                        sendData(device, data);
-                        return;
-                    }
-                    $.get( 'test_data/'+source, function( response ) {
-                        sendData(device, response);
-                    });
-                    break;
-                case 'websocket':
-                    var source = $('input[name=source]:checked', '#data').val();
-                    if ( source == 'base64' ) {
-                        var data =  $('#base64', '#data').val();
-                        sendData(device, data);
-                    }
-                    break;
-            }
-        };
-
-        sendData = function(device, data) {
-            eveconn.sendData(device, data).then(
-                function(res) { console.info("sendData() result:", res); },
-                function(err) { console.error("sendData() error:", err); }
-            );
-        };
-
-        readDataClicked = function() {
-            var device = getDevice($(this));
-            eveconn.readData(device).then(
-                function(res) { console.info("readData() result:", res); },
-                function(err) { console.error("readData() error:", err); }
-            );
-        };
-
-        b64charClicked = function() {
-            var asciiCode = parseInt($(this).attr('data'));
-            var b64 = btoa(String.fromCharCode(asciiCode));
-            $('#base64').val(b64);
-            return false;
-        }
-
-        b64encodeClicked = function() {
-            var rep = {
-                '<ack>': String.fromCharCode(6),
-                '<etb>': String.fromCharCode(23),
-                '<esc>': String.fromCharCode(27),
-                '<can>': String.fromCharCode(24),
-                '<rs>' : String.fromCharCode(30)
-            }
-            var text = $('#base64').val().trim();
-            for (var x in rep) {
-                text = text.replace(new RegExp(x, 'g'), rep[x]);
-            }
-            $('#base64').val(btoa(text));
-        }
-
-        eptMessageClicked = function() {
-            if (window.ProtocolHelpers) {
-                var message = $('#base64').val().trim();
-                var frame = ProtocolHelpers.Physical.getFrame(message);
-                console.log(frame.length);
-                $('#base64').val(btoa(frame));
-            }
-        }
-
-        function getDevice($button) {
-            var type = $button.prevAll('[name=device-type]').val();
-            switch(type) {
-                case 'usb':
-                    return {
-                        type: 'usb',
-                        params: {
-                            vid: $button.prevAll('[name=vid]').val(),
-                            pid: $button.prevAll('[name=pid]').val()
-                        }
-                    }
-                case 'websocket':
-                    return {
-                        type: 'websocket',
-                        params: {
-                            ip: $button.prevAll('[name=ip]').val(),
-                            port: $button.prevAll('[name=port]').val()
-                        }
-                    }
-
-                default:
-                    throw new Error('Invalid type: ' + type);
-            }
-        }
-
-        $(document).ready(function(){
-            $('form.device').submit(function() { return false; });
-            $('form#data').submit(function() { return false; });
-            $('.device-available').click(isDeviceAvailableClicked);
-            $('.start-poll').click(startPollClicked);
-            $('.stop-poll').click(stopPollClicked);
-            $('.send-data').click(sendDataClicked);
-            $('.read-data').click(readDataClicked);
-            $('.b64char').click(b64charClicked);
-            $('#b64encode').click(b64encodeClicked);
-            $('#eptMessage').click(eptMessageClicked);
-        });
-
-    </script>
+    <p><br>EveConnector is up and running</p>
 </body>
 
 </html>

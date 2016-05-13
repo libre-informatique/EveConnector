@@ -43,11 +43,17 @@ var Server = function(port, https_options) {
     httpsServer.listen(port);
     var io = require('socket.io')(httpsServer);
     console.info('Eve-Connector up and running. Listening on port ' + port);
-
+ 
     // Static web pages
     //
     this.express.get('/', function (req, res) {
       res.sendFile(__dirname + '/web/index.html');
+    });
+    this.express.get('/dev', function (req, res) {
+        res.sendFile(__dirname + '/web/dev.html');
+    });
+    this.express.get('/test', function (req, res) {
+        res.sendFile(__dirname + '/web/test.html');
     });
     this.express.use('/js', express.static(__dirname + '/web/js'));
     this.express.use('/test_data', express.static(__dirname + '/web/test_data'));

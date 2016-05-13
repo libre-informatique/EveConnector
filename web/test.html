@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>EveConnector TEST page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            padding: 10px;
+            font: 13px Courier, monospace;
+        }
+
+        h2 { margin: 30px 0 10px; }
+
+        form.device {
+            margin: 20px;
+        }
+
+        .not-available { color: red; }
+        .available { color: green; }
+        button.send-data { margin: 10px; }
+
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+    <script src="js/protocol-helpers.class.js"></script>
+    <script src="js/eve-connector.js"></script>
+</head>
+
+<body>
+    <h1>EveConnector TEST page</h1>
+    <p><a href="https://github.com/libre-informatique/EveConnector.git" target="_blank">Fork it on GitHub</a></p>
+
+    <h2>Devices</h2>
+
+    <hr>
+
+    <form class="device" id="star">
+      <h3>Star printer</h3>
+      <p>(vid=1305 / pid=1)</p>
+      <p class="not-available">Device is not available</p>
+      <input type="hidden" name="device-type" value="usb">
+      <input type="hidden" name="vid" placeholder="VID" value="1305">
+      <input type="hidden" name="pid" placeholder="PID" value="1">
+      <button class="send-data">Print test</button>
+    </form>
+
+    <hr>
+
+    <form class="device" id="boca">
+      <h3>Boca printer</h3>
+      <p>(vid=2627 / pid=514)</p>
+      <p class="not-available">Device is not available</p>
+      <input type="hidden" name="device-type" value="usb">
+      <input type="hidden" name="vid" placeholder="VID" value="2627">
+      <input type="hidden" name="pid" placeholder="PID" value="514">
+      <button class="send-data" disabled="disabled">Print test</button>
+    </form>
+
+
+
+    <script>
+        directExecute = function() {
+          console.log('directExecute');
+          var query = {
+              type: 'usb',
+              params: [{vid: 1305, pid:1}, {vid: 1333, pid: 1}, {vid: 2627, pid: 514}]
+          };
+          eveconn.areDevicesAvailable(query).then(
+              function(res) {
+                $('form.device').each(function(){
+                  var $form = $(this);
+                  var device = getDevice($form);
+                  for ( var i in res.params )
+                    if ( res.params[i].pid == device.params.pid && res.params[i].vid == device.params.vid )
+                      enableDeviceForm($form);
+                });
+              },
+              function(err) { console.error("areDevicesAvailable() error:", err); }
+          );
+        }
+
+        var eveconn = new EveConnector('https://localhost:8164', directExecute);
+
+        sendDataClicked = function() {
+            var $form = $(this).closest('form');
+            var device = getDevice($form);
+            $.get( 'test_data/' + $form.attr('id') + '_b64', function( response ) {
+                sendData(device, response);
+            });
+            return false;
+        };
+
+        sendData = function(device, data) {
+            eveconn.sendData(device, data).then(
+                function(res) { console.info("sendData() result:", res); },
+                function(err) { console.error("sendData() error:", err); }
+            );
+        };
+
+        function enableDeviceForm($form) {
+            $form.find("button.send-data").prop( "disabled", false );
+            $form.find(".not-available").removeClass("not-available").addClass("available").text('Device is available');
+        }
+
+        function getDevice($form) {
+            var type = $form.find('[name=device-type]').val();
+            switch(type) {
+                case 'usb':
+                    return {
+                        type: 'usb',
+                        params: {
+                            vid: $form.find('[name=vid]').val(),
+                            pid: $form.find('[name=pid]').val()
+                        }
+                    }
+                default:
+                    throw new Error('Invalid type: ' + type);
+            }
+        }
+
+        $(document).ready(function(){
+            $('form.device').submit(function() { return false; });
+            $('button.send-data').click(sendDataClicked);
+        });
+
+    </script>
+</body>
+
+</html>
