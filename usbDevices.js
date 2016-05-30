@@ -63,9 +63,80 @@ var areDevicesAvailable = function(type, devicesList)
     return when.all(checks);
 }
 
+var resetData = function(device, socket)
+{
+    //usb.setDebugLevel(4);
+    return when.promise(function(resolve, reject){
+        checkDeviceType(device);
+
+        if ( isPolling(device) )
+            stopPoll(device);
+
+        var vid = parseInt(device.params.vid);
+        var pid = parseInt(device.params.pid);
+        var usbdev = usb.findByIds(vid, pid);
+        if ( usbdev === undefined) {
+            throw new Error('Device not available');
+        }
+        usbdev.open();
+
+        debug('Resetting device...');
+        usbdev.reset(function(error){
+            error && reject(error);
+            debug('Device reset');
+        });
+    });
+};
+
 var sendData = function(device, data, socket)
 {
     //usb.setDebugLevel(4);
+    return when.promise(function(resolve, reject){
+        checkDeviceType(device);
+
+        var wasPolling = isPolling(device);
+        stopPoll(device);
+
+        var vid = parseInt(device.params.vid);
+        var pid = parseInt(device.params.pid);
+        var usbdev = usb.findByIds(vid, pid);
+        if ( usbdev === undefined) {
+            throw new Error('Device not available');
+        }
+        usbdev.open();
+
+        try {
+            var interface = claimUsbInterface(vid, pid);
+            var outEp = getEndpoint(interface, 'out');
+            outEp.on('error', function(epError){
+                debug('outEp error', epError)
+                wasPolling && startPoll(device);
+                reject(epError);
+            });
+
+            // decode base64 data
+            var bin = new Buffer(atob(data.toString()), 'binary');
+
+            debug('sending data... ');
+            outEp.transfer(bin, function(epError, tf_data){
+                debug('...data sent to USB');
+                wasPolling && startPoll(device, socket);
+                epError && reject(epError);
+                //usbdev.close(); // keep this even if polling ???
+                resolve(tf_data);
+            });
+        }
+        catch(e){
+            wasPolling && startPoll(device);
+            reject(e);
+        }
+
+    });
+};
+
+var sendData_BAK = function(device, data, socket)
+{
+    usb.setDebugLevel(4);
     return when.promise(function(resolve, reject){
         checkDeviceType(device);
 
@@ -111,8 +182,6 @@ var sendData = function(device, data, socket)
         });
     });
 };
-
-
 
 var readData = function(device, length)
 {

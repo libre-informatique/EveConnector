@@ -50,7 +50,7 @@
       <input type="hidden" name="device-type" value="usb">
       <input type="hidden" name="vid" placeholder="VID" value="1305">
       <input type="hidden" name="pid" placeholder="PID" value="1">
-      <button class="send-data">Print test</button>
+      <button class="send-data" disabled="disabled">Print test</button>
     </form>
 
     <hr>
@@ -65,6 +65,18 @@
       <button class="send-data" disabled="disabled">Print test</button>
     </form>
 
+    <hr>
+
+    <form class="device" id="star-display">
+      <h3>Star display</h3>
+      <p>(vid=1305 / pid=7)</p>
+      <p class="not-available">Device is not available</p>
+      <input type="hidden" name="device-type" value="usb">
+      <input type="hidden" name="vid" placeholder="VID" value="1305">
+      <input type="hidden" name="pid" placeholder="PID" value="7">
+      <button class="clear-device" disabled="disabled">Clear display</button>
+      <button class="send-data" disabled="disabled">Test display</button>
+    </form>
 
 
     <script>
@@ -72,7 +84,7 @@
           console.log('directExecute');
           var query = {
               type: 'usb',
-              params: [{vid: 1305, pid:1}, {vid: 1333, pid: 1}, {vid: 2627, pid: 514}]
+              params: [{vid: 1305, pid:1}, {vid: 1333, pid: 1}, {vid: 1305, pid: 7}]
           };
           eveconn.areDevicesAvailable(query).then(
               function(res) {
@@ -90,12 +102,31 @@
 
         var eveconn = new EveConnector('https://localhost:8164', directExecute);
 
+        clearDeviceClicked = function() {
+            var $form = $(this).closest('form');
+            var id = $form.attr('id');
+            var device = getDevice($form);
+            if ( id == 'star-display') {
+                data = btoa(String.fromCharCode(12)); // Clear display code
+                sendData(device, data);
+            }
+            return false;
+        };
+
         sendDataClicked = function() {
             var $form = $(this).closest('form');
+            var id = $form.attr('id');
             var device = getDevice($form);
-            $.get( 'test_data/' + $form.attr('id') + '_b64', function( response ) {
-                sendData(device, response);
-            });
+            console.log(device);
+            if ( id == 'star-display') {
+                data = btoa( String.fromCharCode(12) + "Hello World...");
+                sendData(device, data);
+            }
+            else { // printers
+                $.get( 'test_data/' + id + '_b64', function( response ) {
+                    sendData(device, response);
+                });
+            }
             return false;
         };
 
@@ -129,6 +160,7 @@
 
         $(document).ready(function(){
             $('form.device').submit(function() { return false; });
+            $('button.clear-device').click(clearDeviceClicked);
             $('button.send-data').click(sendDataClicked);
         });
 
