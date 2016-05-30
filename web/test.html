@@ -139,6 +139,7 @@
 
         function enableDeviceForm($form) {
             $form.find("button.send-data").prop( "disabled", false );
+            $form.find("button.clear-device").prop( "disabled", false );
             $form.find(".not-available").removeClass("not-available").addClass("available").text('Device is available');
         }
 
