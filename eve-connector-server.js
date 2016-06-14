@@ -10,10 +10,11 @@ debug('Debug enabled');
 
 var fs = require('fs');
 var https_options = {
-    key: fs.readFileSync(__dirname+'/server.key'),
-    cert: fs.readFileSync(__dirname+"/server.crt")
-}
+    key: fs.readFileSync(__dirname + '/server.key'),
+    cert: fs.readFileSync(__dirname + '/server.crt')
+};
 var usbDevices = require('./usbDevices.js');
+var serialDevices = require('./serialDevices.js');
 var websocketDevices = require('./websocketDevices.js');
 var getDeviceModule = function(device) {
     try {
@@ -21,6 +22,8 @@ var getDeviceModule = function(device) {
         switch(type) {
             case 'usb':
                 return usbDevices;
+            case 'serial':
+                return serialDevices;
             case 'websocket':
                 return websocketDevices;
             default:
@@ -43,7 +46,7 @@ var Server = function(port, https_options) {
     httpsServer.listen(port);
     var io = require('socket.io')(httpsServer);
     console.info('Eve-Connector up and running. Listening on port ' + port);
- 
+
     // Static web pages
     //
     this.express.get('/', function (req, res) {

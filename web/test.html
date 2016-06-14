@@ -12,22 +12,17 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             padding: 10px;
             font: 13px Courier, monospace;
         }
-
         h2 { margin: 30px 0 10px; }
-
         form.device {
             margin: 20px;
         }
-
         .not-available { color: red; }
         .available { color: green; }
         button.send-data { margin: 10px; }
-
     </style>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
@@ -43,9 +38,9 @@
 
     <hr>
 
-    <form class="device" id="star">
+    <form class="usb device" id="star">
       <h3>Star printer</h3>
-      <p>(vid=1305 / pid=1)</p>
+      <p>(USB / vid=1305 / pid=1)</p>
       <p class="not-available">Device is not available</p>
       <input type="hidden" name="device-type" value="usb">
       <input type="hidden" name="vid" placeholder="VID" value="1305">
@@ -55,50 +50,68 @@
 
     <hr>
 
-    <form class="device" id="boca">
-      <h3>Boca printer</h3>
-      <p>(vid=2627 / pid=514)</p>
-      <p class="not-available">Device is not available</p>
-      <input type="hidden" name="device-type" value="usb">
-      <input type="hidden" name="vid" placeholder="VID" value="2627">
-      <input type="hidden" name="pid" placeholder="PID" value="514">
-      <button class="send-data" disabled="disabled">Print test</button>
+    <form class="usb device" id="boca">
+        <h3>Boca printer</h3>
+        <p>(USB / vid=2627 / pid=514)</p>
+        <p class="not-available">Device is not available</p>
+        <input type="hidden" name="device-type" value="usb">
+        <input type="hidden" name="vid" placeholder="VID" value="2627">
+        <input type="hidden" name="pid" placeholder="PID" value="514">
+        <button class="send-data" disabled="disabled">Print test</button>
     </form>
 
     <hr>
 
-    <form class="device" id="star-display">
-      <h3>Star display</h3>
-      <p>(vid=1305 / pid=7)</p>
-      <p class="not-available">Device is not available</p>
-      <input type="hidden" name="device-type" value="usb">
-      <input type="hidden" name="vid" placeholder="VID" value="1305">
-      <input type="hidden" name="pid" placeholder="PID" value="7">
-      <button class="clear-device" disabled="disabled">Clear display</button>
-      <button class="send-data" disabled="disabled">Test display</button>
+    <form class="serial device" id="star-display">
+        <h3>Star display</h3>
+        <p>(Serial / pnpId ~ VID_0519+PID_0007+FTYK3H9IA)</p>
+        <p class="not-available">Device is not available</p>
+        <input type="hidden" name="device-type" value="serial">
+        <input type="hidden" name="comName" placeholder="comName" value="">  <!-- test with "COM3" -->
+        <input type="hidden" name="pnpId" placeholder="pnpId" value="VID_0519+PID_0007+FTYK3H9IA">
+        <input type="hidden" name="baudrate" placeholder="baudrate" value="19200">
+        <button class="clear-device" disabled="disabled">Clear display</button>
+        <button class="send-data" disabled="disabled">Test display</button>
     </form>
 
 
     <script>
+        $('form.device button').attr('disabled', 'disabled');
+
         directExecute = function() {
-          console.log('directExecute');
-          var query = {
-              type: 'usb',
-              params: [{vid: 1305, pid:1}, {vid: 2627, pid: 514}, {vid: 1305, pid: 7}]
-          };
-          eveconn.areDevicesAvailable(query).then(
-              function(res) {
-                $('form.device').each(function(){
-                  var $form = $(this);
-                  var device = getDevice($form);
-                  for ( var i in res.params )
-                    if ( res.params[i].pid == device.params.pid && res.params[i].vid == device.params.vid )
-                      enableDeviceForm($form);
-                });
-              },
-              function(err) { console.error("areDevicesAvailable() error:", err); }
-          );
-        }
+            console.log('directExecute');
+            var query = {
+                type: 'usb',
+                params: [{vid: 1305, pid:1}, {vid: 2627, pid: 514}]
+            };
+            eveconn.areDevicesAvailable(query).then(
+                function(res) {
+                    $('form.usb.device').each(function(){
+                        var $form = $(this);
+                        var device = getDevice($form);
+                        for ( var i in res.params )
+                        if ( res.params[i].pid == device.params.pid && res.params[i].vid == device.params.vid )
+                            enableDeviceForm($form);
+                    });
+                },
+                function(err) { console.error("areDevicesAvailable() error:", err); }
+            ).then(function(){
+                query = {type: 'serial', params: [{pnpId: 'VID_0519+PID_0007+FTYK3H9IA'}] };
+                eveconn.areDevicesAvailable(query).then(
+                    function(res) {
+                        console.log(res);
+                        $('form.serial.device').each(function(){
+                            var $form = $(this);
+                            var device = getDevice($form);
+                            for ( var i in res.params )
+                            if ( res.params[i].pnpId.includes(device.params.pnpId) )
+                                enableDeviceForm($form, res.params[i].comName);
+                        });
+                    },
+                    function(err) { console.error("areDevicesAvailable() error:", err); }
+                );
+            });
+        };
 
         var eveconn = new EveConnector('https://localhost:8164', directExecute);
 
@@ -137,10 +150,13 @@
             );
         };
 
-        function enableDeviceForm($form) {
+        function enableDeviceForm($form, comName) {
+            console.log('enableDeviceForm');
             $form.find("button.send-data").prop( "disabled", false );
             $form.find("button.clear-device").prop( "disabled", false );
             $form.find(".not-available").removeClass("not-available").addClass("available").text('Device is available');
+            if (comName)
+                $form.find('[name=comName]').val(comName);
         }
 
         function getDevice($form) {
@@ -153,7 +169,16 @@
                             vid: $form.find('[name=vid]').val(),
                             pid: $form.find('[name=pid]').val()
                         }
-                    }
+                    };
+                    case 'serial':
+                        return {
+                            type: 'serial',
+                            params: {
+                                comName: $form.find('[name=comName]').val(),
+                                pnpId: $form.find('[name=pnpId]').val(),
+                                baudrate: parseInt($form.find('[name=baudrate]').val())
+                            }
+                        }
                 default:
                     throw new Error('Invalid type: ' + type);
             }
