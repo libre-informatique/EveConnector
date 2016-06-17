@@ -28,6 +28,8 @@
     <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
     <script src="js/protocol-helpers.class.js"></script>
     <script src="js/eve-connector.js"></script>
+
+    <script src="js/eve-connector.js"></script>
 </head>
 
 <body>
@@ -64,14 +66,28 @@
 
     <form class="serial device" id="star-display">
         <h3>Star display</h3>
-        <p>(Serial / pnpId ~ VID_0519+PID_0007+FTYK3H9IA)</p>
+        <p>(Serial / pnpId ~ VID_0519+PID_0007)</p>
         <p class="not-available">Device is not available</p>
         <input type="hidden" name="device-type" value="serial">
         <input type="hidden" name="comName" placeholder="comName" value="">  <!-- test with "COM3" -->
-        <input type="hidden" name="pnpId" placeholder="pnpId" value="VID_0519+PID_0007+FTYK3H9IA">
-        <input type="hidden" name="baudrate" placeholder="baudrate" value="19200">
+        <input type="hidden" name="pnpId" placeholder="pnpId" value="VID_0519+PID_0007">
+        <input type="hidden" name="baudrate" placeholder="baudrate" value="1200">
         <button class="clear-device" disabled="disabled">Clear display</button>
         <button class="send-data" disabled="disabled">Test display</button>
+    </form>
+
+    <hr>
+
+    <form class="serial device" id="ingenico-ept">
+        <h3>Ingenico EPT</h3>
+        <p>(Serial / pnpId ~ VID_079B&PID_0028)</p>
+        <p class="not-available">Device is not available</p>
+        <input type="hidden" name="device-type" value="serial">
+        <input type="hidden" name="comName" placeholder="comName" value="">  <!-- test with "COM3" -->
+        <input type="hidden" name="pnpId" placeholder="pnpId" value="VID_079B&PID_0028">
+        <input type="hidden" name="baudrate" placeholder="baudrate" value="1200">
+        <!-- <button class="clear-device" disabled="disabled">Clear display</button> -->
+        <button class="send-data" disabled="disabled">Send data</button>
     </form>
 
 
@@ -96,7 +112,7 @@
                 },
                 function(err) { console.error("areDevicesAvailable() error:", err); }
             ).then(function(){
-                query = {type: 'serial', params: [{pnpId: 'VID_0519+PID_0007+FTYK3H9IA'}] };
+                query = {type: 'serial', params: [{pnpId: 'VID_0519+PID_0007'},{pnpId: 'VID_079B&PID_0028'}] };
                 eveconn.areDevicesAvailable(query).then(
                     function(res) {
                         console.log(res);
@@ -135,6 +151,12 @@
                 data = btoa( String.fromCharCode(12) + "Hello World...");
                 sendData(device, data);
             }
+            if ( id == 'ingenico-ept') {
+                console.log('ingenico-ept');
+                ingenicoSendData(device);
+                // data = btoa( String.fromCharCode(12) + "Hello World...");
+                // sendData(device, data);
+            }
             else { // printers
                 $.get( 'test_data/' + id + '_b64', function( response ) {
                     sendData(device, response);
@@ -149,6 +171,45 @@
                 function(err) { console.error("sendData() error:", err); }
             );
         };
+
+        sendDataDelayed = function(device, data) {
+            return new Promise(function(resolve, reject){
+                setTimeout(function(){
+                    eveconn.sendData(device, data).then(
+                        function(res) { resolve('sent'); },
+                        function(err) { reject(err); }
+                    );
+                }, 100);
+            });
+        }
+
+        ingenicoSendData = function(device) {
+            var data = btoa( String.fromCharCode(5) );
+            sendDataDelayed(device, data).then(
+                function(res) {
+                    data = btoa( String.fromCharCode(2)
+                        + "0100001234110978ABCDEFGHIJ"
+                        + String.fromCharCode(3)
+                        + String.fromCharCode(7));
+                    sendDataDelayed(device, data).then(
+                        function(res) {
+                            data = btoa( String.fromCharCode(4));
+                            sendDataDelayed(device, data)
+                        }
+                    );
+                }
+            );
+        }
+
+
+        ingenicoSendDataDirect = function(device) {
+            data = btoa( "0100001234110978ABCDEFGHIJ");
+            sendDataDelayed(device, data).then(
+                function(res) {
+                    console.log('DONE');
+                }
+            );
+        }
 
         function enableDeviceForm($form, comName) {
             console.log('enableDeviceForm');
