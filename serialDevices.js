@@ -112,7 +112,12 @@ var sendData = function(device, data, socket)
             debug('sending data to comName=' + comName);
             var port = new SerialPort(comName, {
                 baudrate: device.params.baudrate ? device.params.baudrate : 9600,
-                parser: serialport.parsers.byteLength(42) // TODO: this is specific to SCD122U
+                parser: serialport.parsers.byteLength(42), // TODO: this is specific to SCD122U
+
+                // specific to Ingenico ept
+                dataBits: 7,
+                parity: 'even',
+                stopBits: 1  
             });
 
             port.on('open', function() {

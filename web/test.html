@@ -86,7 +86,10 @@
         <input type="hidden" name="comName" placeholder="comName" value="">  <!-- test with "COM3" -->
         <input type="hidden" name="pnpId" placeholder="pnpId" value="VID_079B&PID_0028">
         <input type="hidden" name="baudrate" placeholder="baudrate" value="1200">
+        <input type="hidden" name="dataBits" placeholder="dataBits" value="7">
+        <input type="hidden" name="parity" placeholder="parity" value="even">
         <!-- <button class="clear-device" disabled="disabled">Clear display</button> -->
+        <input type="number" step="0.01" name="price" placeholder="Price">
         <button class="send-data" disabled="disabled">Send data</button>
     </form>
 
@@ -183,14 +186,25 @@
             });
         }
 
+        getLrc = function(str){
+            var sum = 0x0;
+            for ( var i = 0 ; i < str.length ; i++ )
+                sum = sum ^ str.charCodeAt(i);
+            return String.fromCharCode(sum);
+        },
+
         ingenicoSendData = function(device) {
             var data = btoa( String.fromCharCode(5) );
             sendDataDelayed(device, data).then(
                 function(res) {
-                    data = btoa( String.fromCharCode(2)
-                        + "0100001234110978ABCDEFGHIJ"
-                        + String.fromCharCode(3)
-                        + String.fromCharCode(7));
+
+                    data = btoa(
+                        String.fromCharCode(2)
+                         + "0100001234110978ABCDEFGHIJ"
+                         + String.fromCharCode(3)
+                         + getLrc("0100001234110978ABCDEFGHIJ" + String.fromCharCode(3))
+                    );
+                    // data = btoa("0100001234110978ABCDEFGHIJ");
                     sendDataDelayed(device, data).then(
                         function(res) {
                             data = btoa( String.fromCharCode(4));
