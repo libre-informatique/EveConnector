@@ -20,7 +20,7 @@ var ConcertProtocolMessage = function(opts) {
         priv: '0123456789', // private data (10 chars)
         delay: 'A010', // E+ only. Defines when the EPT response should be sent ('A010' = end of transaction, 'A011' = immediately without validation)
         auto: 'B010', // E+ only. Set to 'B011' to force an authorisation request ('B01x' with x in 0, 1, 2)
-        stat: ' ', // status ('0' = transaction accepted, '7' = transaction not accepted) (1 char)
+        stat: '', // status ('0' = transaction accepted, '7' = transaction not accepted, '9' = request handled) (1 char)
         rep: ' '.repeat(55), // response (55 chars)
     };
     opts = opts || {};
@@ -28,7 +28,7 @@ var ConcertProtocolMessage = function(opts) {
     for (var prop in defaults)
         this[prop] = ( opts[prop] !== undefined ) ? opts[prop] : defaults[prop];
 
-    if ( this.origin != 'client' && this.origin != 'server' )
+    if ( this.origin !== 'client' && this.origin !== 'server' )
         throw new Error('ConcertProtocolMessage.origin must be "client" or "server"');
     if ( this.version != 'E' && this.version != 'E+' )
         throw new Error('ConcertProtocolMessage.version must be "E" or "E+"');
@@ -91,10 +91,11 @@ var ConcertProtocolResponse = function(msg) {
     }
 
     this.getStatusText = function() {
-        if ( this.stat === '0' ) return 'Transaction accepted';
-        if ( this.stat === '7' ) return 'Transaction non accepted';
-        if ( this.stat === '9' ) return 'Request handled';
-        return 'Status unknown';
+        if ( this.stat === '0' ) return 'accepted';
+        if ( this.stat === '7' ) return 'not accepted';
+        if ( this.stat === '9' ) return 'handled';
+        if ( this.stat.length === 0) return 'undefined';
+        return 'unknown';
     }
 }
 
@@ -173,7 +174,6 @@ var ConcertProtocolDevice = function(device, connector) {
         ];
         var data = {writes: writes, reads: reads};
         return connector.sendData(device, data).then(function(res) {
-            console.info('doTransaction res = ', atob(res));
             return new ConcertProtocolResponse(atob(res));
         });
     }
