@@ -106,50 +106,161 @@ var resetData = function(device, socket)
 var sendData = function(device, data, socket)
 {
     debug('sendData()');
+    if ( Array.isArray(data.writes) &&  Array.isArray(data.reads) )
+        return doTransaction(device, data);
+
     return getComName(device)
     .then(function(comName){
         return when.promise(function(resolve, reject){
             debug('sending data to comName=' + comName);
             var port = new SerialPort(comName, {
                 baudrate: device.params.baudrate ? device.params.baudrate : 9600,
-                parser: serialport.parsers.byteLength(42), // TODO: this is specific to SCD122U
-
-                // specific to Ingenico ept
-                dataBits: 7,
-                parity: 'even',
-                stopBits: 1  
+                //parser: serialport.parsers.byteLength(42), // TODO: this is specific to SCD122U
+                dataBits: device.params.databits ? device.params.databits : 8,
+                parity: device.params.parity ? device.params.parity : 'none',
+                stopBits: device.params.stopbits ? device.params.stopbits : 1
             });
+            var readAfterSend = device.params.readAfterSend;
 
             port.on('open', function() {
                 data = new Buffer(atob(data.toString()));
                 port.write(data, function(err) {
                     if (err) {
                       debug('Error on write: ', err.message);
+                      port.close();
                       reject(err);
                     }
                     debug('Message written: ' + data);
-                    port.close();
-                        resolve(data);
-                    });
-                });
-
-                // open errors will be emitted as an error event
-                port.on('error', function(err) {
-                    debug('serial port Error: ', err.message);
-                    reject(err);
+                    if ( !readAfterSend ) {
+                        port.close();
+                        // we send back base64 encoded data
+                        resolve(data != undefined ? btoa(data) : '');
+                    }
                 });
             });
+
+            port.on('data', function(data) {
+                debug('got data after send:' + data , data.toString().charCodeAt(0));
+                if ( readAfterSend ) {
+                    port.close();
+                    // we send back base64 encoded data
+                    resolve(data != undefined ? btoa(data) : '');
+                }
+            });
+
+            // open errors will be emitted as an error event
+            port.on('error', function(err) {
+                debug('serial port Error: ', err.message);
+                reject(err);
+            });
         });
+    });
 };
 
 
 var readData = function(device, length)
 {
-    return when.promise(function(resolve, reject){
-        debug('Reading data (TODO)...');
-        resolve('data read (fake)');
-    });
+    debug('readData()');
+    return getComName(device)
+    .then(function(comName){
+        return when.promise(function(resolve, reject){
+            debug('reading data from comName=' + comName);
+            var port = new SerialPort(comName, {
+                baudrate: device.params.baudrate ? device.params.baudrate : 9600,
+                //parser: serialport.parsers.byteLength(42), // TODO: this is specific to SCD122U
+                dataBits: device.params.databits ? device.params.databits : 8,
+                parity: device.params.parity ? device.params.parity : 'none',
+                stopBits: device.params.stopbits ? device.params.stopbits : 1
+            });
+
+            port.on('data', function(data) {
+                debug('got data:' + data , data.toString().charCodeAt(0));
+                port.close();
+                // we send back base64 encoded data
+                resolve(data != undefined ? btoa(data) : '');
+            });
+
+            port.on('error', function(err) {
+                debug('serial port Error: ', err.message);
+                reject(err);
+            });
+        });
+    })
 }
+
+var doTransaction = function(device, data)
+{
+    debug('doTransaction()');
+    var writes = data.writes || [];
+    var reads = data.reads || [];
+    var result = '';
+    return getComName(device).then(function(comName){
+        return when.promise(function(resolve, reject){
+            debug('Start transaction with comName=' + comName);
+            var port = new SerialPort(comName, {
+                baudrate: device.params.baudrate ? device.params.baudrate : 9600,
+                //parser: serialport.parsers.byteLength(42), // TODO: this is specific to SCD122U
+                dataBits: device.params.databits ? device.params.databits : 8,
+                parity: device.params.parity ? device.params.parity : 'none',
+                stopBits: device.params.stopbits ? device.params.stopbits : 1
+            });
+
+            var done = function() {
+                port.close();
+                // we send back base64 encoded data
+                resolve(result != undefined ? btoa(result) : '');
+            }
+
+            var write = function() {
+                if ( writes.length > 0 ) {
+                    var data = writes.shift();
+                    data = new Buffer(atob(data.toString()));
+                    port.write(data, function(err) {
+                        if (err) {
+                          debug('Error on write: ', err.message);
+                          port.close();
+                          reject(err);
+                        }
+                        debug('Message written: ' + data);
+                        if ( reads.length == 0 ) {
+                            if ( writes.length == 0 ) done();
+                            else write();
+                        }
+                    });
+                }
+                else if ( reads.length == 0 ) done();
+            }
+
+            port.on('open', write);
+
+            port.on('data', function(data) {
+                debug('got data:' + data , data.toString().charCodeAt(0));
+                var found = false;
+                if ( reads.length > 0 ) {
+                    var next = atob(reads[0]);
+                    debug('next:' + next , next.toString().charCodeAt(0));
+                    if ( next == '*' ) {
+                        result = data;
+                        found = true;
+                    }
+                    if ( next == data )
+                        found = true;
+                }
+                if ( found ) {
+                    reads.shift();
+                    write();
+                }
+                if ( reads.length == 0 && writes.length == 0 ) done();
+            });
+
+            // open errors will be emitted as an error event
+            port.on('error', function(err) {
+                debug('serial port Error: ', err.message);
+                reject(err);
+            });
+        });
+    });
+};
 
 /**
  * returns the comName of the first device having a pnpId containing pnpId

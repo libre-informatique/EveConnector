@@ -28,8 +28,7 @@
     <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
     <script src="js/protocol-helpers.class.js"></script>
     <script src="js/eve-connector.js"></script>
-
-    <script src="js/eve-connector.js"></script>
+    <script src="js/concert-protocol.js"></script>
 </head>
 
 <body>
@@ -47,7 +46,7 @@
       <input type="hidden" name="device-type" value="usb">
       <input type="hidden" name="vid" placeholder="VID" value="1305">
       <input type="hidden" name="pid" placeholder="PID" value="1">
-      <button class="send-data" disabled="disabled">Print test</button>
+      <button class="send-data">Print test</button>
     </form>
 
     <hr>
@@ -59,7 +58,7 @@
         <input type="hidden" name="device-type" value="usb">
         <input type="hidden" name="vid" placeholder="VID" value="2627">
         <input type="hidden" name="pid" placeholder="PID" value="514">
-        <button class="send-data" disabled="disabled">Print test</button>
+        <button class="send-data">Print test</button>
     </form>
 
     <hr>
@@ -72,8 +71,8 @@
         <input type="hidden" name="comName" placeholder="comName" value="">  <!-- test with "COM3" -->
         <input type="hidden" name="pnpId" placeholder="pnpId" value="VID_0519+PID_0007">
         <input type="hidden" name="baudrate" placeholder="baudrate" value="19200">
-        <button class="clear-device" disabled="disabled">Clear display</button>
-        <button class="send-data" disabled="disabled">Test display</button>
+        <button class="clear-device">Clear display</button>
+        <button class="send-data">Test display</button>
     </form>
 
     <hr>
@@ -86,19 +85,32 @@
         <input type="hidden" name="comName" placeholder="comName" value="">  <!-- test with "COM3" -->
         <input type="hidden" name="pnpId" placeholder="pnpId" value="VID_079B&PID_0028">
         <input type="hidden" name="baudrate" placeholder="baudrate" value="1200">
-        <input type="hidden" name="dataBits" placeholder="dataBits" value="7">
+        <input type="hidden" name="databits" placeholder="dataBits" value="7">
         <input type="hidden" name="parity" placeholder="parity" value="even">
-        <!-- <button class="clear-device" disabled="disabled">Clear display</button> -->
-        <input type="number" step="0.01" name="price" placeholder="Price">
-        <button class="send-data" disabled="disabled">Send data</button>
+        <!-- <button class="clear-device">Clear display</button> -->
+        <br>
+        Concert Protocol version:
+        <label><input type="radio" name="version" value="E"> E</label>
+        &nbsp;
+        <label><input type="radio" name="version" value="E+"  checked="checked"> E+</label>
+        <br>
+        Get response:&nbsp;
+        <label><input type="radio" name="delay" value="A011" checked="checked"> immediately</label>
+        &nbsp;
+        <label><input type="radio" name="delay" value="A010"> after&nbsp;transaction</label>
+        <br>
+        <label for="amount">Amount (cents):</label>
+        <input type="number" step="1" name="amount" id="amount" value="1234" placeholder="Amount (cents)">
+        <button class="send-data">Send data</button>
+        <div id="ept-response"></div>
     </form>
 
 
     <script>
+
         $('form.device button').attr('disabled', 'disabled');
 
         directExecute = function() {
-            console.log('directExecute');
             var query = {
                 type: 'usb',
                 params: [{vid: 1305, pid:1}, {vid: 2627, pid: 514}]
@@ -118,7 +130,6 @@
                 query = {type: 'serial', params: [{pnpId: 'VID_0519+PID_0007'},{pnpId: 'VID_079B&PID_0028'}] };
                 eveconn.areDevicesAvailable(query).then(
                     function(res) {
-                        console.log(res);
                         $('form.serial.device').each(function(){
                             var $form = $(this);
                             var device = getDevice($form);
@@ -148,19 +159,17 @@
         sendDataClicked = function() {
             var $form = $(this).closest('form');
             var id = $form.attr('id');
-            var device = getDevice($form);
-            console.log(device);
+            var device;
             if ( id == 'star-display') {
+                device = getDevice($form);
                 data = btoa( String.fromCharCode(12) + "Hello World...");
                 sendData(device, data);
             }
             if ( id == 'ingenico-ept') {
-                console.log('ingenico-ept');
-                ingenicoSendData(device);
-                // data = btoa( String.fromCharCode(12) + "Hello World...");
-                // sendData(device, data);
+                ingenicoSendData();
             }
             else { // printers
+                device = getDevice($form);
                 $.get( 'test_data/' + id + '_b64', function( response ) {
                     sendData(device, response);
                 });
@@ -193,42 +202,28 @@
             return String.fromCharCode(sum);
         },
 
-        ingenicoSendData = function(device) {
-            var data = btoa( String.fromCharCode(5) );
-            sendDataDelayed(device, data).then(
-                function(res) {
-
-                    data = btoa(
-                        String.fromCharCode(2)
-                         + "0100001234110978ABCDEFGHIJ"
-                         + String.fromCharCode(3)
-                         + getLrc("0100001234110978ABCDEFGHIJ" + String.fromCharCode(3))
-                    );
-                    // data = btoa("0100001234110978ABCDEFGHIJ");
-                    sendDataDelayed(device, data).then(
-                        function(res) {
-                            data = btoa( String.fromCharCode(4));
-                            sendDataDelayed(device, data)
-                        }
-                    );
-                }
-            );
-        }
-
-
-        ingenicoSendDataDirect = function(device) {
-            data = btoa( "0100001234110978ABCDEFGHIJ");
-            sendDataDelayed(device, data).then(
-                function(res) {
-                    console.log('DONE');
-                }
-            );
+        ingenicoSendData = function() {
+            $('#ept-response').html('');
+            var $form = $('form#ingenico-ept');
+            var device = getDevice($form);
+            var msg_opts = {
+                amount: $form.find('[name=amount]').val(),
+                delay: $form.find('[name=delay]:checked').val(),
+                version: $form.find('[name=version]:checked').val()
+            };
+            var msg = new ConcertProtocolMessage(msg_opts);
+            console.info('Sending message ' + msg.encode());
+            var cp_device = new ConcertProtocolDevice(device, eveconn);
+            cp_device.doTransaction(msg).then(function(res){
+                console.log('status = ' + res.stat);
+                $('#ept-response').html('status = ' + res.stat + ' ' + res.getStatusText());
+            }).catch(function(err){
+                console.error(err);
+            });
         }
 
         function enableDeviceForm($form, comName) {
-            console.log('enableDeviceForm');
-            $form.find("button.send-data").prop( "disabled", false );
-            $form.find("button.clear-device").prop( "disabled", false );
+            $form.find("button, input").prop( "disabled", false );
             $form.find(".not-available").removeClass("not-available").addClass("available").text('Device is available');
             if (comName)
                 $form.find('[name=comName]').val(comName);
@@ -246,25 +241,41 @@
                         }
                     };
                     case 'serial':
-                        return {
-                            type: 'serial',
-                            params: {
-                                comName: $form.find('[name=comName]').val(),
-                                pnpId: $form.find('[name=pnpId]').val(),
-                                baudrate: parseInt($form.find('[name=baudrate]').val())
-                            }
-                        }
+                        var params = {
+                            comName: $form.find('[name=comName]').val(),
+                            pnpId: $form.find('[name=pnpId]').val(),
+                        };
+                        if ( $form.find('[name=baudrate]').length )
+                            params.baudrate = parseInt($form.find('[name=baudrate]').val());
+                        if ( $form.find('[name=databits]').length )
+                            params.databits = parseInt($form.find('[name=databits]').val());
+                        if ( $form.find('[name=parity]').length )
+                            params.parity = $form.find('[name=parity]').val();
+                        return {type: 'serial', params: params};
                 default:
                     throw new Error('Invalid type: ' + type);
             }
         }
 
+        function concertProtocolRadios() {
+            var version = $('#ingenico-ept [name=version]:checked').val();
+            if (version == 'E') {
+                $('#ingenico-ept [name=delay][value=A010]').prop('checked', true);
+                $('#ingenico-ept [name=delay]').prop('disabled', true);
+            }
+            else {
+                $('#ingenico-ept [name=delay]').prop('disabled', false);
+            }
+        }
+
         $(document).ready(function(){
             $('form.device').submit(function() { return false; });
+            $('input, button', 'form.device').prop('disabled', true);
             $('button.clear-device').click(clearDeviceClicked);
             $('button.send-data').click(sendDataClicked);
+            $('#ingenico-ept input[type=radio][name=version]').change(concertProtocolRadios);
+            concertProtocolRadios();
         });
-
     </script>
 </body>
 
