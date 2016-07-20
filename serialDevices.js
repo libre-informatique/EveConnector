@@ -203,10 +203,10 @@ var doTransaction = function(device, data)
                 dataBits: device.params.databits ? device.params.databits : 8,
                 parity: device.params.parity ? device.params.parity : 'none',
                 stopBits: device.params.stopbits ? device.params.stopbits : 1
-            });
+            }, false);
 
             var done = function() {
-                port.close();
+                if ( port.isOpen() ) port.close();
                 // we send back base64 encoded data
                 resolve(result != undefined ? btoa(result) : '');
             }
@@ -218,7 +218,7 @@ var doTransaction = function(device, data)
                     port.write(data, function(err) {
                         if (err) {
                           debug('Error on write: ', err.message);
-                          port.close();
+                          if ( port.isOpen() ) port.close();
                           reject(err);
                         }
                         debug('Message written: ' + data);
@@ -231,7 +231,15 @@ var doTransaction = function(device, data)
                 else if ( reads.length == 0 ) done();
             }
 
-            port.on('open', write);
+            if ( port.isOpen() )
+                reject('Port is already open');
+            else port.open(function(err){
+                if ( err ) {
+                    debug('serial port open Error: ', err.message);
+                    reject(err);
+                }
+                else write();
+            });
 
             port.on('data', function(data) {
                 debug('got data:' + data , data.toString().charCodeAt(0));
@@ -256,6 +264,7 @@ var doTransaction = function(device, data)
             // open errors will be emitted as an error event
             port.on('error', function(err) {
                 debug('serial port Error: ', err.message);
+                if ( port.isOpen() ) port.close();
                 reject(err);
             });
         });
