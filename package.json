@@ -1,6 +1,6 @@
 {
   "name": "eve-connector",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "description": "USB over WebSocket: make your browser communicate with USB through WebSockets",
   "main": "eve-connector-server.js",
   "dependencies": {
