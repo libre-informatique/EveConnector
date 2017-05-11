@@ -79,11 +79,16 @@
 
     <form class="serial device" id="ingenico-ept">
         <h3>Ingenico EPT</h3>
-        <p>(Serial / pnpId ~ VID_079B&PID_0028)</p>
+        <p>
+            Serial / pnpId =
+            <select name="pnpId">
+                <option value="VID_079B&PID_0028">VID_079B&PID_0028</option>
+                <option value="usb-079b_0028-if00">usb-079b_0028-if00</option>
+            </select>
+        </p>
         <p class="not-available">Device is not available</p>
         <input type="hidden" name="device-type" value="serial">
         <input type="hidden" name="comName" placeholder="comName" value="">  <!-- test with "COM3" -->
-        <input type="hidden" name="pnpId" placeholder="pnpId" value="VID_079B&PID_0028">
         <input type="hidden" name="baudrate" placeholder="baudrate" value="1200">
         <input type="hidden" name="databits" placeholder="dataBits" value="7">
         <input type="hidden" name="parity" placeholder="parity" value="even">
@@ -108,8 +113,6 @@
 
     <script>
 
-        $('form.device button').attr('disabled', 'disabled');
-
         directExecute = function() {
             var query = {
                 type: 'usb',
@@ -127,7 +130,7 @@
                 },
                 function(err) { console.error("areDevicesAvailable() error:", err); }
             ).then(function(){
-                query = {type: 'serial', params: [{pnpId: 'VID_0519+PID_0007'},{pnpId: 'VID_079B&PID_0028'}] };
+                query = {type: 'serial', params: [{pnpId: 'VID_0519+PID_0007'},{pnpId: 'VID_079B&PID_0028'},{pnpId: 'usb-079b_0028-if00'}] };
                 eveconn.areDevicesAvailable(query).then(
                     function(res) {
                         $('form.serial.device').each(function(){
@@ -268,7 +271,19 @@
             }
         }
 
+        function initIngenicoPnpId() {
+            var url = new URL(location);
+            var pnpId = url.searchParams.get('ingenico');
+            var $select = $('#ingenico-ept select[name=pnpId]');
+            if (pnpId)
+                $select.val(pnpId);
+            $select.on('change', function(){
+                window.location.href = url.origin + url.pathname + '?ingenico=' + encodeURIComponent($(this).val());
+            });
+        }
+
         $(document).ready(function(){
+            initIngenicoPnpId();
             $('form.device').submit(function() { return false; });
             $('input, button', 'form.device').prop('disabled', true);
             $('button.clear-device').click(clearDeviceClicked);
