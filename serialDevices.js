@@ -75,16 +75,20 @@ var areDevicesAvailable = function(type, devicesList)
                     var comName = device.comName;
                     var pnpId = device.pnpId;
                     var found = ports.find(function(port){
-                        if (comName && pnpId && comName === port.comName && port.pnpId.includes(pnpId))
+                        if (comName && pnpId && comName === port.comName && port.pnpId && port.pnpId.includes(pnpId)) {
                             return true;
-                        if (comName && comName === port.comName)
+                        }
+                        if (comName && comName === port.comName) {
                             return true;
-                        if (pnpId &&port.pnpId.includes(pnpId))
+                        }
+                        if (pnpId && port.pnpId && port.pnpId.includes(pnpId)) {
                             return true;
+                        }
                         return false;
                     });
-                    if (found)
+                    if (found) {
                         available.params.push(found);
+                    }
                     resolve(available);
                 }
             });
@@ -197,6 +201,8 @@ var doTransaction = function(device, data)
     return getComName(device).then(function(comName){
         return when.promise(function(resolve, reject){
             debug('Start transaction with comName=' + comName);
+            debug('writes = ' + writes);
+            debug('reads = ' + reads);
             var port = new SerialPort(comName, {
                 baudrate: device.params.baudrate ? device.params.baudrate : 9600,
                 //parser: serialport.parsers.byteLength(42), // TODO: this is specific to SCD122U
