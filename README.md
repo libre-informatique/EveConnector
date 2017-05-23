@@ -43,7 +43,7 @@ On most Linux systems, USB devices are mapped with read-only permissions by defa
 To open a device through EveConnector, your user who runs Node.js will need to have write access to it too.
 A simple solution is to set a udev rule. Create a file /etc/udev/rules.d/50-yourdevicename.rules with the following content:
 
-```SUBSYSTEM=="usb", ATTR{idVendor}=="[yourdevicevendor]", MODE="0664", GROUP="plugdev"```
+```SUBSYSTEM=="usb", ATTR{idVendor}=="[yourdevicevendor]", ATTR{idProduct}=="0202", MODE="0664", GROUP="plugdev"```
 
 Then, just restart the udev daemon:
 ```
