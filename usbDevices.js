@@ -330,4 +330,5 @@ exports.sendData = sendData;
 exports.startPoll = startPoll;
 exports.stopPoll = stopPoll;
 exports.readData = readData;
+exports.resetData = resetData;
 exports.test = test;

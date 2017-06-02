@@ -190,6 +190,20 @@ var Server = function(port, https_options) {
                 debug('stopPoll answered with error:', error);
             }
         });
+
+        socket.on('resetData', function(device) {
+            debug('received resetData: ', device);
+
+            var devmod = getDeviceModule(device);
+
+            if(!(device.type == 'usb' || devmod)) {
+                socket.emitError('resetData', ['reset not supported for device type', device]);
+
+                return;
+            }
+
+            devmod.resetData(device);
+        });
     });
 } // end createServer()
 

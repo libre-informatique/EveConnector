@@ -155,4 +155,12 @@ var EveConnector = function(uri, directExecute) {
             });
         });
     };
+
+    this.resetData = function(device) {
+        var socket = this.socket;
+
+        return new Promise(function(resolve, reject) {
+            socket.emit('resetData', device);
+        });
+    }
 };
