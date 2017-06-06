@@ -80,6 +80,10 @@ var EveConnector = function(uri, directExecute) {
         if ( nb >= 5 ) this.io.reconnection(false);
     });
 
+    this.isConnected = function() {
+        return this.socket.connected;
+    };
+
     this.isDeviceAvailable = function(device) {
         var socket = this.socket;
         return new Promise(function(resolve, reject){
