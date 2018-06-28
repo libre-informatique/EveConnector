@@ -77,6 +77,20 @@
 
     <hr>
 
+    <form class="serial device" id="spp30-ept">
+        <h3>Spire payments spp30</h3>
+        <label><input type="text" name="ip" id="spp30-ip">IP</label>
+        <span class="not-available">Device is not available</span>
+        <button id="spp30-available">Check ip</button>
+        <br>
+        <label for="amount">Amount (cents):</label>
+        <input type="number" step="1" name="amount" value="1234" placeholder="Amount (cents)">
+        <button id="spp30" class="send-data">Send data</button>
+        <div id="spp30-response"></div>
+    </form>
+
+    <hr>
+
     <form class="serial device" id="ingenico-ept">
         <h3>Ingenico EPT</h3>
         <p>
@@ -109,7 +123,6 @@
         <button class="send-data">Send data</button>
         <div id="ept-response"></div>
     </form>
-
 
     <script>
 
@@ -243,20 +256,19 @@
                             pid: $form.find('[name=pid]').val()
                         }
                     };
-                    case 'serial':
-                        var params = {
-                            comName: $form.find('[name=comName]').val(),
-                            pnpId: $form.find('[name=pnpId]').val(),
-                        };
-                        if ( $form.find('[name=baudrate]').length )
-                            params.baudrate = parseInt($form.find('[name=baudrate]').val());
-                        if ( $form.find('[name=databits]').length )
-                            params.databits = parseInt($form.find('[name=databits]').val());
-                        if ( $form.find('[name=parity]').length )
-                            params.parity = $form.find('[name=parity]').val();
-                        return {type: 'serial', params: params};
-                default:
-                    throw new Error('Invalid type: ' + type);
+                case 'serial':
+                    var params = {
+                        comName: $form.find('[name=comName]').val(),
+                        pnpId: $form.find('[name=pnpId]').val(),
+                    };
+                    if ( $form.find('[name=baudrate]').length )
+                        params.baudrate = parseInt($form.find('[name=baudrate]').val());
+                    if ( $form.find('[name=databits]').length )
+                        params.databits = parseInt($form.find('[name=databits]').val());
+                    if ( $form.find('[name=parity]').length )
+                        params.parity = $form.find('[name=parity]').val();
+                    
+                    return {type: 'serial', params: params};
             }
         }
 
@@ -282,6 +294,53 @@
             });
         }
 
+        function spp30Available() {
+            var ip = $('#spp30-ept').find('[name=ip]').val();
+            var device = {type: 'spp30', params: {ip: ip, port: 8888}};
+
+            eveconn.isDeviceAvailable(device).then(function(res) {
+                if(res.available) {
+                    $('#spp30').prop('disabled', false);
+                    $('#spp30-ept').find(".not-available").removeClass("not-available").addClass("available").text('Device is available');
+                }
+            }).catch(function(err) {
+                console.error(err);
+            });
+
+            return false;
+        }
+
+        function spp30() {
+            var form = $('#spp30-ept');
+            var ip = form.find('[name=ip]').val();
+            var amount = form.find('[name=amount]').val();
+            var device = {type: 'spp30', params: {ip: ip, port: 8888}};
+
+            eveconn.payment(device, amount).then(function(res){
+                var status;
+
+                switch(res.status) {
+                    case '0':
+                        status = 'accepted';
+
+                        break;
+                    case '7': 
+                        status = 'denied';
+
+                        break;
+                    default:
+                        status = 'unknown'; 
+                }
+
+                $('#spp30-response').html('status = ' + res.status + ' ' + status);
+            }).catch(function(err){
+                $('#spp30-response').html('ERROR');
+                console.error(err);
+            });
+
+            return false;
+        }
+
         $(document).ready(function(){
             initIngenicoPnpId();
             $('form.device').submit(function() { return false; });
@@ -290,6 +349,9 @@
             $('button.send-data').click(sendDataClicked);
             $('#ingenico-ept input[type=radio][name=version]').change(concertProtocolRadios);
             concertProtocolRadios();
+            $('#spp30-ip, #spp30-available').prop('disabled', false);
+            $('#spp30-available').click(spp30Available);
+            $('#spp30').click(spp30);
         });
     </script>
 </body>

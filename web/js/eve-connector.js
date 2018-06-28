@@ -167,4 +167,17 @@ var EveConnector = function(uri, directExecute) {
             socket.emit('resetData', device);
         });
     }
+
+    this.payment = function(device, amount) {
+        var socket = this.socket;
+
+        return new Promise(function(resolve, reject) {
+            socket.emit('payment', device, amount);
+            socket.once('payment', function(response) {
+                resolve(response);
+            }, function(error) {
+                reject(error);
+            });
+        });
+    }
 };

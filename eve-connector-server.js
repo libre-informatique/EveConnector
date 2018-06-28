@@ -16,6 +16,7 @@ var https_options = {
 var usbDevices = require('./usbDevices.js');
 var serialDevices = require('./serialDevices.js');
 var websocketDevices = require('./websocketDevices.js');
+var spp30 = require('./lib/spp30.js');
 var getDeviceModule = function(device) {
     try {
         var type = typeof(device) == 'string' ? device : device.type;
@@ -26,6 +27,8 @@ var getDeviceModule = function(device) {
                 return serialDevices;
             case 'websocket':
                 return websocketDevices;
+            case 'spp30':
+                return spp30;
             default:
                 return false;
         }
@@ -204,11 +207,19 @@ var Server = function(port, https_options) {
 
             devmod.resetData(device);
         });
+
+        socket.on('payment', function(device, amount) {
+            debug('Payment: ', device);
+
+            spp30.payment(device, amount).then(function(res) {
+                socket.emit('payment', res);
+            });
+        });
     });
 } // end createServer()
 
 
-// Display some information about this module (based on package.jon)
+// Display some information about this module (based on package.json)
 require('appinspect').print(module);
 
 exports.createServer = function(port, https_options){
