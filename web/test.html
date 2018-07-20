@@ -51,6 +51,18 @@
 
     <hr>
 
+    <form class="usb device" id="sanei">
+      <h3>Sanei printer</h3>
+      <p>(USB / vid=4293 / pid=7)</p>
+      <p class="not-available">Device is not available</p>
+      <input type="hidden" name="device-type" value="usb">
+      <input type="hidden" name="vid" placeholder="VID" value="4293">
+      <input type="hidden" name="pid" placeholder="PID" value="7">
+      <button class="send-data">Print test</button>
+    </form>
+
+    <hr>
+
     <form class="usb device" id="boca">
         <h3>Boca printer</h3>
         <p>(USB / vid=2627 / pid=514)</p>
@@ -129,7 +141,7 @@
         directExecute = function() {
             var query = {
                 type: 'usb',
-                params: [{vid: 1305, pid:1}, {vid: 2627, pid: 514}]
+                params: [{vid: 1305, pid:1}, {vid: 2627, pid: 514}, {vid: 4293, pid: 7}]
             };
             eveconn.areDevicesAvailable(query).then(
                 function(res) {
@@ -194,10 +206,106 @@
         };
 
         sendData = function(device, data) {
-            eveconn.sendData(device, data).then(
-                function(res) { console.info("sendData() result:", res); },
-                function(err) { console.error("sendData() error:", err); }
-            );
+            // eveconn.sendData(device, data).then(
+            //     function(res) { console.info("sendData() result:", res); },
+            //     function(err) { console.error("sendData() error:", err); }
+            // );
+            
+            return new Promise(function(resolve, reject){
+              eveconn.startPoll(device, function(response) {
+                console.log(response);
+                if(getStatuses(atob(response)).length > 0) {
+                  eveconn.stopPoll(device);
+
+                  reject({
+                    statuses: getStatuses(atob(response)),
+                    raw_status: response
+                  });
+                }
+              });
+
+              eveconn.sendData(device, data).then(function(){
+                eveconn.stopPoll(device);
+                
+                resolve('ok');
+              });
+            });
+        };
+
+        getStatuses = function(status) {
+            if ( !validateStatus(status) )
+              return ['Could not parse printer status'];
+            var err = [];
+            var byte;
+            if ( status.length > 2 ) {
+              byte = status.charCodeAt(2);
+              if ( byte & 8 )
+                err.push('OFFLINE');
+              if ( byte & 32 )
+                err.push('COVER OPEN');
+            }
+            if ( status.length > 3 ) {
+              byte = status.charCodeAt(3);
+              if ( this.model === 'TUP500' && byte & 4 )
+                err.push('HEAD THERMISTOR ERROR');
+              if ( byte & 8 )
+                err.push('AUTO CUTTER ERROR');
+              if ( byte & 32 )
+                err.push('NON-RECOVERABLE ERROR');
+              if ( byte & 64 )
+                err.push('STOPPED BY HIGH HEAD TEMPERATURE');
+            }
+            if ( status.length > 4 ) {
+              byte = status.charCodeAt(4);
+              if ( byte & 8 )
+                err.push('BM ERROR');
+              if ( byte & 64 )
+                err.push('RECEIVE BUFFER OVERFLOW');
+            }
+            if ( status.length > 5 ) {
+              byte = status.charCodeAt(5);
+              if ( byte & 8 )
+                err.push('PAPER END / NO PAPER');
+            }
+            return err;
+        };
+
+        getStatuses = function(status) {
+            if ( !validateStatus(status) )
+              return ['Could not parse printer status'];
+            var err = [];
+            var byte;
+            if ( status.length > 2 ) {
+              byte = status.charCodeAt(2);
+              if ( byte & 8 )
+                err.push('OFFLINE');
+              if ( byte & 32 )
+                err.push('COVER OPEN');
+            }
+            if ( status.length > 3 ) {
+              byte = status.charCodeAt(3);
+              if ( this.model === 'TUP500' && byte & 4 )
+                err.push('HEAD THERMISTOR ERROR');
+              if ( byte & 8 )
+                err.push('AUTO CUTTER ERROR');
+              if ( byte & 32 )
+                err.push('NON-RECOVERABLE ERROR');
+              if ( byte & 64 )
+                err.push('STOPPED BY HIGH HEAD TEMPERATURE');
+            }
+            if ( status.length > 4 ) {
+              byte = status.charCodeAt(4);
+              if ( byte & 8 )
+                err.push('BM ERROR');
+              if ( byte & 64 )
+                err.push('RECEIVE BUFFER OVERFLOW');
+            }
+            if ( status.length > 5 ) {
+              byte = status.charCodeAt(5);
+              if ( byte & 8 )
+                err.push('PAPER END / NO PAPER');
+            }
+            return err;
         };
 
         sendDataDelayed = function(device, data) {
