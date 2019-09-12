@@ -83,3 +83,9 @@ License
 --------
 
 EveConnector is licensed under the GNU-GPLv3. See [LICENSE](LICENSE)
+
+See also
+--------
+Other related projects:
+- [the WebUSB draft](https://wicg.github.io/webusb/)
+- [QZ tray](https://github.com/qzind/tray/)
